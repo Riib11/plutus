@@ -11,6 +11,7 @@ import           Data.Aeson                 (FromJSON, ToJSON)
 import           Data.Sequence              (Seq)
 import           GHC.Generics               (Generic)
 import           Servant.Client             (BaseUrl)
+import Control.Monad.Freer.Log (LogMessage)
 
 import           Cardano.Node.Types         (FollowerID)
 import           Wallet.Emulator.ChainIndex (ChainIndexEvent, ChainIndexState)
@@ -18,7 +19,7 @@ import           Wallet.Emulator.ChainIndex (ChainIndexEvent, ChainIndexState)
 data AppState =
     AppState
         { _indexState      :: ChainIndexState
-        , _indexEvents     :: Seq ChainIndexEvent
+        , _indexEvents     :: Seq (LogMessage ChainIndexEvent)
         , _indexFollowerID :: Maybe FollowerID
         } deriving (Eq, Show)
 

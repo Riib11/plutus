@@ -9,6 +9,7 @@
 module Cardano.Node.Client where
 
 import           Cardano.Node.API          (API)
+import Control.Monad.Freer.Log (LogMessage)
 import           Cardano.Node.Follower     (NodeFollowerEffect (..))
 import           Cardano.Node.RandomTx     (GenRandomTx (..))
 import           Cardano.Node.Types        (FollowerID)
@@ -27,7 +28,7 @@ healthcheck :: ClientM NoContent
 getCurrentSlot :: ClientM Slot
 addTx :: Tx -> ClientM NoContent
 randomTx :: ClientM Tx
-consumeEventHistory :: ClientM [ChainEvent]
+consumeEventHistory :: ClientM [LogMessage ChainEvent]
 newFollower :: ClientM FollowerID
 getBlocks :: FollowerID -> ClientM [Block]
 (healthcheck, addTx, getCurrentSlot, randomTx, consumeEventHistory, newFollower, getBlocks) =

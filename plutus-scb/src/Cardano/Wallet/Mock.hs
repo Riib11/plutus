@@ -32,9 +32,6 @@ import qualified Wallet.Effects                 as W
 import           Wallet.Emulator.Wallet         (Wallet (Wallet), WalletState (..))
 import qualified Wallet.Emulator.Wallet         as EM
 
-initialState :: Wallet -> WalletState
-initialState = WalletState . EM.walletPrivKey
-
 data MockWalletMsg =
     CallWallets
     | CallValueAt

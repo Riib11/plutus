@@ -1,41 +1,132 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GADTs        #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Plutus.Trace.Playground(
-    Playground
-    , PlaygroundLocal(..)
-    , PlaygroundGlobal(..)
-    , ptrace
+    PlaygroundTrace
+    -- * Constructing traces
+    , Waiting.waitUntilSlot
+    , Waiting.waitNSlots
+    , Waiting.nextSlot
+    , EmulatedWalletAPI.payToWallet
+    , RunContractPlayground.callEndpoint
+    -- * Running traces
+    , EmulatorConfig(..)
+    , initialDistribution
+    , defaultEmulatorConfig
+    , runPlaygroundStream
+    -- * Interpreter
+    , interpretPlaygroundTrace
+    , walletInstanceTag
     ) where
 
-import qualified Data.Aeson             as JSON
-import           Ledger.Slot            (Slot)
-import           Ledger.Value           (Value)
+import Control.Lens
+import Control.Monad (void)
+import Control.Monad.Freer (Member, Eff, interpret)
+import Control.Monad.Freer.Error (Error)
+import           Control.Monad.Freer.Extras                      (raiseEnd3)
+import           Control.Monad.Freer.Log                         (LogMsg (..), mapLog, LogMessage)
+import Control.Monad.Freer.State (State, evalState)
+import           Control.Monad.Freer.Coroutine                   (Yield)
+import Data.Foldable (traverse_)
+import Data.Map (Map)
+import qualified Data.Map as Map
+
+import           Language.Plutus.Contract                      (Contract (..), HasBlockchainActions)
 import           Wallet.Emulator.Wallet (Wallet (..))
+import Plutus.Trace.Emulator.Types (walletInstanceTag)
+import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, handleDeterministicIds)
+import           Plutus.Trace.Scheduler                          (SystemCall, runThreads)
+import Wallet.Emulator.Stream (runTraceStream, EmulatorConfig(..), EmulatorErr(..), initialDistribution, defaultEmulatorConfig)
+import           Wallet.Emulator.Chain                           (ChainControlEffect, ChainEffect)
+import           Wallet.Emulator.MultiAgent                      (EmulatorEvent' (..),
+                                                                  MultiAgentEffect,
+                                                                  schedulerEvent, EmulatorEvent)
+import Wallet.Types (ContractInstanceId)
+import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError)
+import           Plutus.Trace.Emulator.System                    (launchSystemThreads)
+import           Plutus.Trace.Emulator.Types                     (ContractConstraints, 
+                                                                  EmulatorMessage (..), EmulatorThreads)
+import qualified Plutus.Trace.Effects.RunContractPlayground as RunContractPlayground
+import Plutus.Trace.Effects.RunContractPlayground (RunContractPlayground, handleRunContractPlayground)
+import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
+import qualified Plutus.Trace.Effects.EmulatedWalletAPI as EmulatedWalletAPI
+import Plutus.Trace.Effects.Waiting (Waiting, handleWaiting)
+import qualified Plutus.Trace.Effects.Waiting as Waiting
+import Streaming (Stream)
+import Streaming.Prelude (Of)
 
-import           Plutus.Trace.Types
+type PlaygroundTrace a =
+    Eff
+        '[ RunContractPlayground
+         , Waiting
+         , EmulatedWalletAPI
+        ] a
 
-data Playground
+handlePlaygroundTrace ::
+    forall s e effs a.
+    ( HasBlockchainActions s
+    , ContractConstraints s
+    , Show e
+    , Member MultiAgentEffect effs
+    , Member (LogMsg EmulatorEvent') effs
+    , Member (Error ContractInstanceError) effs
+    , Member (State (Map Wallet ContractInstanceId)) effs
+    , Member (State EmulatorThreads) effs
+    , Member ContractInstanceIdEff effs
+    )
+    => Contract s e ()
+    -> PlaygroundTrace a
+    -> Eff (Yield (SystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) a
+handlePlaygroundTrace contract =
+    interpret handleEmulatedWalletAPI
+    . interpret (handleWaiting @_ @effs)
+    . interpret (handleRunContractPlayground @s @e @_ @effs contract)
+    . raiseEnd3
 
-data PlaygroundLocal r where
-   CallEndpoint :: String -> JSON.Value -> PlaygroundLocal ()
-   PayToWallet :: Wallet -> Value -> PlaygroundLocal ()
 
-data PlaygroundGlobal r where
-   WaitForSlot :: Slot -> PlaygroundGlobal ()
+-- | Run a 'Trace Playground', streaming the log messages as they arrive
+runPlaygroundStream :: forall s e effs a.
+    ( HasBlockchainActions s
+    , ContractConstraints s
+    , Show e
+    )
+    => EmulatorConfig
+    -> Contract s e ()
+    -> PlaygroundTrace a
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+runPlaygroundStream conf contract = runTraceStream conf . interpretPlaygroundTrace contract (conf ^. initialDistribution . to Map.keys)
 
-instance SimulatorBackend Playground where
-    type LocalAction Playground = PlaygroundLocal
-    type GlobalAction Playground = PlaygroundGlobal
-    type Agent Playground = Wallet
-
--- | Playground traces need to be serialisable, so they are just
---   lists of single 'PlaygroundAction's.
-type PlaygroundAction = Simulator Playground ()
-type PlaygroundTrace = [PlaygroundAction]
-
-ptrace :: PlaygroundTrace
-ptrace =
-    [ RunLocal (Wallet 1) $ CallEndpoint "submit" (JSON.toJSON "100 Ada")
-    , RunGlobal $ WaitForSlot 10
-    ]
+interpretPlaygroundTrace :: forall s e effs a.
+    ( Member MultiAgentEffect effs
+    , Member (Error ContractInstanceError) effs
+    , Member ChainEffect effs
+    , Member ChainControlEffect effs
+    , Member (LogMsg EmulatorEvent') effs
+    , HasBlockchainActions s
+    , ContractConstraints s
+    , Show e
+    )
+    => Contract s e () -- ^ The contract
+    -> [Wallet] -- ^ Wallets that should be simulated in the emulator
+    -> PlaygroundTrace a
+    -> Eff effs ()
+interpretPlaygroundTrace contract wallets action =
+    evalState @EmulatorThreads mempty
+        $ evalState @(Map Wallet ContractInstanceId) Map.empty
+        $ handleDeterministicIds
+        $ interpret (mapLog (review schedulerEvent))
+        $ runThreads
+        $ do
+            launchSystemThreads wallets
+            void
+                $ handlePlaygroundTrace contract 
+                $ do
+                    void $ Waiting.nextSlot
+                    traverse_ RunContractPlayground.launchContract wallets
+                    action

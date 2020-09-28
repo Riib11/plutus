@@ -61,8 +61,8 @@ import           Language.Plutus.Contract.Effects.ExposeEndpoint (ActiveEndpoint
 import           Language.Plutus.Contract.Effects.WriteTx        (WriteTxResponse (..))
 import           Language.Plutus.Contract.Resumable              (IterationID, Request (..), Response (..))
 import           Language.Plutus.Contract.Trace                  (EndpointError (..))
-import           Language.Plutus.Contract.Trace.RequestHandler   (MaxIterations (..), RequestHandler (..),
-                                                                  RequestHandlerLogMsg, defaultMaxIterations, extract,
+import           Language.Plutus.Contract.Trace.RequestHandler   (RequestHandler (..),
+                                                                  RequestHandlerLogMsg, extract,
                                                                   maybeToHandler, tryHandler, wrapHandler)
 import qualified Language.Plutus.Contract.Trace.RequestHandler   as RequestHandler
 
@@ -90,6 +90,13 @@ import           Plutus.SCB.Types                                (SCBError (..),
 import           Plutus.SCB.Utils                                (tshow)
 
 import qualified Plutus.SCB.Core.Projections                     as Projections
+
+newtype MaxIterations = MaxIterations Int
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving newtype (ToJSON, JSON.FromJSON)
+
+defaultMaxIterations :: MaxIterations
+defaultMaxIterations = MaxIterations 20
 
 data ContractInstanceMsg t =
     ProcessFirstInboxMessage ContractInstanceId (Response ContractResponse)
@@ -455,6 +462,7 @@ processUtxoAtRequests ::
     forall effs.
     ( Member ChainIndexEffect effs
     , Member (LogObserve (LogMessage Text.Text)) effs
+    , Member (LogMsg RequestHandlerLogMsg) effs
     )
     => RequestHandler effs ContractSCBRequest ContractResponse
 processUtxoAtRequests =
@@ -597,8 +605,8 @@ processAllContractOutboxes ::
     => MaxIterations -- ^ Maximum number of times the requests for each contract instance are processed
     -> Eff effs ()
 processAllContractOutboxes mi =
-    mapLog @_ @(ContractInstanceMsg t) HandlingRequest
-    $ mapLog @_ @(ContractInstanceMsg t) BalancingTx
+    interpret (mapLog @_ @(ContractInstanceMsg t) HandlingRequest)
+    $ interpret (mapLog @_ @(ContractInstanceMsg t) BalancingTx)
     $ surroundInfo @Text.Text "processAllContractOutboxes"
     $ respondtoRequests @t @(LogMsg TxBalanceMsg ': LogMsg RequestHandlerLogMsg ': effs) mi
     $ contractRequestHandler @t @(Reader ContractInstanceId ': LogMsg TxBalanceMsg ': LogMsg RequestHandlerLogMsg ': effs)

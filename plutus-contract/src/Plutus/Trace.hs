@@ -10,8 +10,11 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
-module Plutus.Trace where
+module Plutus.Trace(
+    module X
+    , Scheduler.SchedulerLog
+    , Scheduler.ThreadEvent
+    ) where
 
-import           Plutus.Trace.Emulator
-import           Plutus.Trace.Playground
-import           Plutus.Trace.Types
+import           Plutus.Trace.Emulator   as X
+import Plutus.Trace.Scheduler as Scheduler
