@@ -71,6 +71,7 @@ library
         text -any,
         transformers -any,
         plutus-tx -any,
+        plutus-common -any,
 
 test-suite plutus-tx-tests
     type: exitcode-stdio-1.0
