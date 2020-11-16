@@ -95,6 +95,9 @@
     configureArgs = "--disable-benchmarks";
     # Invalidate and update if you change the version
     plan-sha256 = "0rjpf8xnamn063hbzi4wij8h2aiv71ailbpgd4ykfkv7mlc9mzny";
+    modules = [{
+      packages.ghcide.patches = [ ../../patches/ghcide_partial_iface.patch ];
+    }];
   };
   in { inherit (hspkgs) haskell-language-server hie-bios implicit-hie; }
 )
