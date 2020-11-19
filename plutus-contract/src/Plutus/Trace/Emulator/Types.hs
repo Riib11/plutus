@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds     #-}
@@ -24,6 +25,10 @@ module Plutus.Trace.Emulator.Types(
     , ContractHandle(..)
     , Emulator
     , ContractConstraints
+    -- * Instance state
+    , ContractInstanceState(..)
+    , emptyInstanceState
+    , addEventInstanceState
     -- * Logging
     , ContractInstanceLog(..)
     , cilId
@@ -40,6 +45,7 @@ module Plutus.Trace.Emulator.Types(
     , _CurrentRequests
     , _InstErr
     , _ContractLog
+    , UserThreadMsg(..)
     ) where
 
 import           Control.Lens
@@ -54,14 +60,18 @@ import           Data.Text.Prettyprint.Doc (Pretty(..), (<+>), colon, braces, vi
 import qualified Data.Row.Internal                  as V
 import           GHC.Generics                       (Generic)
 import Data.Text (Text)
-import           Language.Plutus.Contract           (Contract)
-import           Language.Plutus.Contract.Resumable (Request (..), Response (..))
-import           Language.Plutus.Contract.Schema    (Input, Output)
+import           Language.Plutus.Contract           (Contract(..))
+import qualified Language.Plutus.Contract.Types                as Contract.Types
+import           Language.Plutus.Contract.Resumable (Request (..), Response (..), Requests(..))
+import           Language.Plutus.Contract.Schema    (Input, Output, Event, Handlers)
+import Data.Sequence (Seq)
+import qualified Language.Plutus.Contract.Resumable            as State
 import           Ledger.Slot                        (Slot (..))
 import           Ledger.Tx                          (Tx)
 import           Plutus.Trace.Scheduler             (SystemCall, ThreadId)
 import           Wallet.Emulator.Wallet             (Wallet (..))
 import           Wallet.Types                       (ContractInstanceId, Notification(..), NotificationError)
+import           Language.Plutus.Contract.Types                (ResumableResult (..))
 
 type ContractConstraints s =
     ( V.Forall (Output s) V.Unconstrained1
@@ -79,6 +89,8 @@ data EmulatorMessage =
     | EndpointCall JSON.Value
     | Notify Notification
     | Freeze
+    | ContractInstanceStateRequest ThreadId
+    | ContractInstanceStateResponse JSON.Value
     deriving stock (Eq, Show)
 
 -- | A map of contract instance ID to thread ID
@@ -131,6 +143,18 @@ newtype ContractInstanceTag = ContractInstanceTag { unContractInstanceTag :: Tex
 walletInstanceTag :: Wallet -> ContractInstanceTag
 walletInstanceTag (Wallet i) = fromString $ "Contract instance for wallet " <> show i
 
+-- | Log message produced by the user (main) thread
+data UserThreadMsg =
+    UserThreadErr ContractInstanceError
+    | UserLog String
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+instance Pretty UserThreadMsg where
+    pretty = \case
+        UserLog str -> pretty str
+        UserThreadErr e -> "Error:" <+> pretty e
+
 data ContractInstanceMsg =
     Started
     | StoppedNoError
@@ -145,6 +169,7 @@ data ContractInstanceMsg =
     | SendingNotification Notification
     | NotificationSuccess Notification
     | NotificationFailure NotificationError
+    | SendingContractState ThreadId
     | Freezing
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -169,6 +194,7 @@ instance Pretty ContractInstanceMsg where
         NotificationFailure e -> 
             "Notification failed:" <+> viaShow e
         Freezing -> "Freezing contract instance"
+        SendingContractState t -> "Sending contract state to" <+> pretty t
 
 data ContractInstanceLog =
     ContractInstanceLog
@@ -183,5 +209,39 @@ instance Pretty ContractInstanceLog where
     pretty ContractInstanceLog{_cilMessage, _cilId, _cilTag} =
         hang 2 $ vsep [pretty _cilId <+> braces (pretty _cilTag) <> colon, pretty _cilMessage]
 
+
+-- | The state of a running contract instance with schema @s@ and error type @e@
+data ContractInstanceState s e a =
+    ContractInstanceState
+        { instContractState   :: ResumableResult e (Event s) (Handlers s) a
+        , instEvents          :: Seq (Response (Event s))
+        , instHandlersHistory :: Seq [State.Request (Handlers s)]
+        }
+        deriving stock Generic
+
+deriving anyclass instance  (V.Forall (Input s) JSON.ToJSON, V.Forall (Output s) JSON.ToJSON, JSON.ToJSON e, JSON.ToJSON a) => JSON.ToJSON (ContractInstanceState s e a)
+deriving anyclass instance  (V.Forall (Input s) JSON.FromJSON, V.Forall (Output s) JSON.FromJSON, JSON.FromJSON e, JSON.FromJSON a, V.AllUniqueLabels (Input s), V.AllUniqueLabels (Output s)) => JSON.FromJSON (ContractInstanceState s e a)
+
+emptyInstanceState :: Contract s e a -> ContractInstanceState s e a
+emptyInstanceState (Contract c) =
+    ContractInstanceState
+        { instContractState = Contract.Types.runResumable [] mempty c
+        , instEvents = mempty
+        , instHandlersHistory = mempty
+        }
+
+addEventInstanceState :: forall s e a.
+    Contract s e a
+    -> Response (Event s)
+    -> ContractInstanceState s e a
+    -> ContractInstanceState s e a
+addEventInstanceState (Contract c) event s@ContractInstanceState{instContractState, instEvents, instHandlersHistory} =
+    let ResumableResult{wcsResponses,wcsRequests=Requests{unRequests},wcsCheckpointStore} = instContractState
+        state' = Contract.Types.insertAndUpdate c wcsCheckpointStore wcsResponses event
+        events' = instEvents |> event
+        history' = instHandlersHistory |> unRequests
+    in s { instContractState = state', instEvents = events', instHandlersHistory = history'}
+
 makeLenses ''ContractInstanceLog
 makePrisms ''ContractInstanceMsg
+

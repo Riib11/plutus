@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds             #-}
@@ -16,6 +17,7 @@ import           Control.Monad                                 (void, forever)
 import Control.Monad.Freer (Eff)
 import           Control.Monad.Error.Lens
 import           Control.Monad.Freer.Log (LogLevel(..))
+import qualified Control.Monad.Freer.Log as Log
 import           Control.Monad.Except                          (catchError, throwError)
 import           Test.Tasty
 
@@ -30,9 +32,9 @@ import qualified Ledger.Ada                                    as Ada
 import qualified Ledger.Constraints                            as Constraints
 import qualified Ledger.Crypto                                 as Crypto
 import           Prelude                                       hiding (not)
-import Plutus.Trace.Emulator (callEndpoint, activateContract, ContractInstanceTag, Emulator)
-import Plutus.Trace (Trace)
-import Plutus.Trace.Emulator.Types (ContractInstanceLog(..), ContractInstanceMsg(..))
+import Plutus.Trace.Emulator (callEndpoint, activateContract, ContractInstanceTag, Emulator, EmulatorTrace)
+import Plutus.Trace.Emulator.Types (ContractInstanceLog(..), ContractInstanceMsg(..), UserThreadMsg(..), ContractInstanceState(..))
+import Language.Plutus.Contract.Types (ResumableResult(..))
 import qualified Plutus.Trace as Trace
 import qualified Wallet.Emulator                               as EM
 
@@ -43,8 +45,8 @@ import           Language.Plutus.Contract.Trace.RequestHandler (maybeToHandler)
 
 tests :: TestTree
 tests =
-    let run :: Slot -> String -> TracePredicate -> Eff '[Trace Emulator] () -> _
-        run sl = checkPredicate (defaultCheckOptions & maxSlot .~ sl & minLogLevel .~ Debug)
+    let run :: Slot -> String -> TracePredicate -> EmulatorTrace () -> _
+        run sl = checkPredicateOptions (defaultCheckOptions & maxSlot .~ sl & minLogLevel .~ Debug)
 
         check :: Slot -> String -> Contract Schema ContractError () -> _ -> _
         check sl nm contract pred = run sl nm (pred contract) (void $ activateContract w1 contract tag)
@@ -88,7 +90,7 @@ tests =
                     .&&. not (endpointAvailable @"2" con tag))
                 $ do
                     hdl <- activateContract w1 con tag
-                    callEndpoint @"1" w1 hdl 1
+                    callEndpoint @"1" hdl 1
 
         , let theContract :: Contract Schema ContractError () = void $ endpoint @"1" @Int >> endpoint @"2" @Int
           in run 1 "call endpoint (1)"
@@ -99,13 +101,13 @@ tests =
           in run 1 "call endpoint (2)"
                 (endpointAvailable @"2" theContract tag
                     .&&. not (endpointAvailable @"1" theContract tag))
-                (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" w1 hdl 1)
+                (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
         
         , let theContract :: Contract Schema ContractError () = void $ endpoint @"1" @Int >> endpoint @"2" @Int
           in run 1 "call endpoint (3)"
                 (not (endpointAvailable @"2" theContract tag)
                     .&&. not (endpointAvailable @"1" theContract tag))
-                (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" w1 hdl 1 >> callEndpoint @"2" w1 hdl 2)
+                (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1 >> callEndpoint @"2" hdl 2)
 
         , let theContract :: Contract Schema ContractError () = void $ submitTx mempty >> watchAddressUntil someAddress 20
           in run 1 "submit tx"
@@ -125,18 +127,18 @@ tests =
               theContract :: Contract Schema ContractError () = void $ selectEither l r
           in run 1 "select either"
                 (assertDone theContract tag (const True) "left branch should finish")
-                (activateContract w1 theContract tag >>= (\hdl -> callEndpoint @"1" w1 hdl 1 >> callEndpoint @"2" w1 hdl 2))
+                (activateContract w1 theContract tag >>= (\hdl -> callEndpoint @"1" hdl 1 >> callEndpoint @"2" hdl 2))
 
         , let theContract :: Contract Schema ContractError () = void $ loopM (\_ -> Left <$> endpoint @"1" @Int) 0
           in run 1 "loopM"
                 (endpointAvailable @"1" theContract tag)
-                (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" w1 hdl 1)
+                (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
 
         , let theContract :: Contract Schema ContractError () = void $ collectUntil (+) 0 (endpoint @"1") 10
           in run 1 "collect until"
                 (endpointAvailable @"1" theContract tag
                     .&&. waitingForSlot theContract tag 10)
-                (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" w1 hdl 1)
+                (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
 
         , let theContract :: Contract Schema ContractError () = void $ throwing Con._ContractError $ OtherError "error"
           in run 1 "throw an error"
@@ -162,22 +164,39 @@ tests =
 
         , run 1 "checkpoints"
             (not (endpointAvailable @"2" checkpointContract tag) .&&. (endpointAvailable @"1" checkpointContract tag))
-            (void $ activateContract w1 checkpointContract tag >>= \hdl -> callEndpoint @"1" w1 hdl 1 >> callEndpoint @"2" w1 hdl 1)
+            (void $ activateContract w1 checkpointContract tag >>= \hdl -> callEndpoint @"1" hdl 1 >> callEndpoint @"2" hdl 1)
 
         , run 1 "error handling & checkpoints"
             (assertDone errorContract tag (\i -> i == 11) "should finish")
-            (void $ activateContract w1 (void errorContract) tag >>= \hdl -> callEndpoint @"1" w1 hdl 1 >> callEndpoint @"2" w1 hdl 10 >> callEndpoint @"3" w1 hdl 11)
+            (void $ activateContract w1 (void errorContract) tag >>= \hdl -> callEndpoint @"1" hdl 1 >> callEndpoint @"2" hdl 10 >> callEndpoint @"3" hdl 11)
 
         , let theContract :: Contract Schema ContractError () = logInfo @String "waiting for endpoint 1" >> endpoint @"1" >>= logInfo . (<>) "Received value: " . show
-              matchLogs :: [ContractInstanceLog] -> Bool
+              matchLogs :: [EM.EmulatorTimeEvent ContractInstanceLog] -> Bool
               matchLogs lgs =
-                  case (_cilMessage <$> lgs) of
-                            [ Started, ContractLog "waiting for endpoint 1", CurrentRequests [_], ReceiveEndpointCall _, ContractLog "Received value: 27", HandledRequest _, CurrentRequests [], Stopped] -> True
+                  case (_cilMessage . EM._eteEvent <$> lgs) of
+                            [ Started, ContractLog "waiting for endpoint 1", CurrentRequests [_], ReceiveEndpointCall _, ContractLog "Received value: 27", HandledRequest _, CurrentRequests [], StoppedNoError] -> True
                             _ -> False
 
           in run 1 "contract logs"
                 (assertInstanceLog tag matchLogs)
-                (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" w1 hdl 27)
+                (void $ activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 27)
+
+        , let theContract :: Contract Schema ContractError () = logInfo @String "waiting for endpoint 1" >> endpoint @"1" >>= logInfo . (<>) "Received value: " . show
+              matchLogs :: [EM.EmulatorTimeEvent UserThreadMsg] -> Bool
+              matchLogs lgs =
+                  case (EM._eteEvent <$> lgs) of
+                            [ UserLog "Received contract state", UserLog "Final state: Right Nothing"] -> True
+                            _ -> False
+
+          in run 3 "contract state"
+                (assertUserLog matchLogs)
+                $ do
+                    hdl <- Trace.activateContractWallet w1 theContract
+                    Trace.waitNSlots 1
+                    ContractInstanceState{instContractState=ResumableResult{wcsFinalState}} <- Trace.getContractState hdl
+                    Log.logInfo @String "Received contract state"
+                    Log.logInfo @String $ "Final state: " <> show wcsFinalState
+
         ]
 
 w1 :: EM.Wallet

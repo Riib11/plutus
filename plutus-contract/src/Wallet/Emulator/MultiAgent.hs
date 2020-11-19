@@ -36,7 +36,7 @@ import           GHC.Generics                (Generic)
 import           Ledger                      hiding (to, value)
 import qualified Ledger.AddressMap           as AM
 import qualified Ledger.Index                as Index
-import           Plutus.Trace.Emulator.Types (ContractInstanceLog)
+import           Plutus.Trace.Emulator.Types (ContractInstanceLog, UserThreadMsg)
 import qualified Plutus.Trace.Scheduler      as Scheduler
 import qualified Wallet.API                  as WAPI
 import qualified Wallet.Effects              as Wallet
@@ -81,6 +81,7 @@ data EmulatorEvent' =
     | NotificationEvent Notify.EmulatorNotifyLogMsg
     | SchedulerEvent Scheduler.SchedulerLog
     | InstanceEvent ContractInstanceLog
+    | UserThreadEvent UserThreadMsg
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -93,6 +94,7 @@ instance Pretty EmulatorEvent' where
         NotificationEvent e -> pretty e
         SchedulerEvent e -> pretty e
         InstanceEvent e -> pretty e
+        UserThreadEvent e -> pretty e
 
 type EmulatorEvent = EmulatorTimeEvent EmulatorEvent'
 
@@ -116,6 +118,9 @@ schedulerEvent = prism' SchedulerEvent (\case { SchedulerEvent e -> Just e; _ ->
 
 instanceEvent :: Prism' EmulatorEvent' ContractInstanceLog
 instanceEvent = prism' InstanceEvent (\case { InstanceEvent e -> Just e; _ -> Nothing })
+
+userThreadEvent :: Prism' EmulatorEvent' UserThreadMsg
+userThreadEvent = prism' UserThreadEvent (\case { UserThreadEvent e -> Just e ; _ -> Nothing })
 
 type EmulatedWalletEffects =
         '[ Wallet.WalletEffect

@@ -35,6 +35,7 @@ module Language.Plutus.Contract.Test(
     , assertFailedTransaction
     , assertHooks
     , assertResponses
+    , assertUserLog
     , tx
     , anyTx
     , assertEvents
@@ -102,7 +103,7 @@ import           Plutus.Trace                                    (defaultEmulato
 import           Plutus.Trace.Emulator                           (runEmulatorStream)
 import qualified Wallet.Emulator.Folds as Folds
 import Wallet.Emulator.Folds (EmulatorFoldErr, postMapM, Outcome(..))
-import Plutus.Trace.Emulator.Types (ContractInstanceTag, ContractConstraints, ContractInstanceLog)
+import Plutus.Trace.Emulator.Types (ContractInstanceTag, ContractConstraints, ContractInstanceLog, UserThreadMsg)
 import Wallet.Emulator.Stream (takeUntilSlot, foldEmulatorStreamM, filterLogLevel)
 import qualified Streaming.Prelude as S
 import qualified Streaming as S
@@ -465,4 +466,12 @@ assertInstanceLog ::
 assertInstanceLog tag pred' = flip postMapM (L.generalize $ Folds.instanceLog tag) $ \lg -> do
     let result = pred' lg
     unless result (tell @(Doc Void) $ vsep ("Contract instance log failed to validate:" : fmap pretty lg))
+    pure result
+
+assertUserLog ::
+    ([EmulatorTimeEvent UserThreadMsg] -> Bool)
+    -> TracePredicate
+assertUserLog pred' = flip postMapM (L.generalize Folds.userLog) $ \lg -> do
+    let result = pred' lg
+    unless result (tell @(Doc Void) $ vsep ("User log failed to validate:" : fmap pretty lg))
     pure result

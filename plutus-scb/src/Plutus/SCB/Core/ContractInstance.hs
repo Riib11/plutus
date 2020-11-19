@@ -192,12 +192,6 @@ instance ToJSON v => ToObject (ContractInstanceMsg v) where
             mkObjectStr "exceeded maximum number of iterations"
                 (instanceID, Tagged @"max_iterations" maxIts)
 
--- TODO:
--- 1. per-instanceID messages
--- 2. per-iteration messages for
---      * RequestHandlerLogMsg
---      * TxBalanceMsg
-
 instance Pretty t => Pretty (ContractInstanceMsg t) where
     pretty = \case
         ProcessFirstInboxMessage instanceID response ->

@@ -161,10 +161,10 @@ runThreads ::
     ( Eq systemEvent
     , Member (LogMsg SchedulerLog) effs
     )
-    => Eff (Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
+    => Eff (Reader ThreadId ': Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
     -> Eff effs ()
 runThreads e = do
-    k <- runC e
+    k <- runC $ runReader initialThreadId e
     case k of
         Done () -> pure ()
         Continue _ k' ->

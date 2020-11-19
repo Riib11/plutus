@@ -31,6 +31,7 @@ module Wallet.Emulator.Folds (
     , annotatedBlockchain
     , blockchain
     , emulatorLog
+    , userLog
     -- * Etc.
     , renderLines
     , preMapMaybeM
@@ -55,7 +56,7 @@ import qualified Control.Foldl as L
 import Ledger.Value (Value)
 import Ledger.Constraints.OffChain (UnbalancedTx)
 import Language.Plutus.Contract.Effects.WriteTx (pendingTransaction, HasWriteTx)
-import Plutus.Trace.Emulator.Types (ContractInstanceTag, cilMessage, cilTag, _HandledRequest, ContractConstraints, ContractInstanceLog)
+import Plutus.Trace.Emulator.Types (ContractInstanceTag, cilMessage, cilTag, _HandledRequest, ContractConstraints, ContractInstanceLog, UserThreadMsg)
 import           Language.Plutus.Contract.Schema               (Event (..), Handlers)
 import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventInstanceState, emptyInstanceState, instEvents, instContractState, instHandlersHistory)
 import qualified Data.Aeson as JSON
@@ -65,7 +66,7 @@ import qualified Language.Plutus.Contract.Resumable            as State
 import Language.Plutus.Contract.Types (ResumableResult(..))
 import qualified Ledger.AddressMap as AM
 import Ledger.AddressMap (UtxoMap)
-import Wallet.Emulator.MultiAgent (EmulatorEvent, instanceEvent, eteEvent, chainEvent, chainIndexEvent, EmulatorTimeEvent)
+import Wallet.Emulator.MultiAgent (EmulatorEvent, instanceEvent, eteEvent, chainEvent, chainIndexEvent, EmulatorTimeEvent, userThreadEvent)
 import Wallet.Emulator.Wallet (Wallet, walletAddress)
 import Wallet.Emulator.ChainIndex (_AddressStartWatching)
 import Wallet.Rollup.Types (AnnotatedTx)
@@ -147,7 +148,14 @@ instanceLog :: ContractInstanceTag -> EmulatorEventFold [EmulatorTimeEvent Contr
 instanceLog tag = 
     let flt :: EmulatorEvent -> Maybe (EmulatorTimeEvent ContractInstanceLog)
         flt = traverse (preview (instanceEvent . filtered ((==) tag . view cilTag)))
-    in preMapMaybe flt $ Fold (flip (:)) [] reverse
+    in preMapMaybe flt L.list
+
+-- | Log and error messages produced by the main (user) thread in the emulator
+userLog :: EmulatorEventFold [EmulatorTimeEvent UserThreadMsg]
+userLog =
+    let flt :: EmulatorEvent -> Maybe (EmulatorTimeEvent UserThreadMsg)
+        flt = traverse (preview userThreadEvent)
+    in preMapMaybe flt L.list
 
 data Outcome e a =
     Done a

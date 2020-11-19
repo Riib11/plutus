@@ -22,6 +22,7 @@ module Plutus.Trace.Emulator(
     , RunContract.activateContractWallet
     , RunContract.walletInstanceTag
     , RunContract.callEndpoint
+    , RunContract.getContractState
     , EmulatedWalletAPI.liftWallet
     , EmulatedWalletAPI.payToWallet
     , Waiting.nextSlot
@@ -53,15 +54,16 @@ module Plutus.Trace.Emulator(
 
 import           Control.Lens
 import           Control.Monad                                   (void)
+import Control.Monad.Freer.Reader (Reader)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Coroutine                   (Yield)
 import           Control.Monad.Freer.Error                       (Error)
-import           Control.Monad.Freer.Extras                      (raiseEnd4)
+import           Control.Monad.Freer.Extras                      (raiseEnd5)
 import           Control.Monad.Freer.Log                         (LogMessage (..), LogMsg (..),
                                                                   mapLog)
 import           Control.Monad.Freer.State                       (State, evalState)
 import qualified Data.Map                                        as Map
-import           Plutus.Trace.Scheduler                          (SystemCall, runThreads)
+import           Plutus.Trace.Scheduler                          (SystemCall, runThreads, ThreadId)
 import           Wallet.Emulator.Chain                           (ChainControlEffect, ChainEffect)
 import qualified Wallet.Emulator.Chain                           as ChainState
 import           Wallet.Emulator.MultiAgent                      (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
@@ -82,7 +84,7 @@ import qualified Plutus.Trace.Effects.Waiting as Waiting
 import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError)
 import           Plutus.Trace.Emulator.System                    (launchSystemThreads)
 import           Plutus.Trace.Emulator.Types                     (ContractConstraints, ContractHandle (..), Emulator,
-                                                                  EmulatorMessage (..), EmulatorThreads, ContractInstanceTag)
+                                                                  EmulatorMessage (..), EmulatorThreads, ContractInstanceTag, UserThreadMsg(..))
 import Streaming (Stream)
 import Streaming.Prelude (Of)
 
@@ -92,6 +94,7 @@ type EmulatorTrace a =
             , Waiting
             , EmulatorControl
             , EmulatedWalletAPI
+            , LogMsg String
             ] a
 
 handleEmulatorTrace ::
@@ -104,13 +107,14 @@ handleEmulatorTrace ::
     , Member ContractInstanceIdEff effs
     )
     => EmulatorTrace a
-    -> Eff (Yield (SystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) a
+    -> Eff (Reader ThreadId ': Yield (SystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) a
 handleEmulatorTrace =
-    interpret handleEmulatedWalletAPI
+    interpret (mapLog (UserThreadEvent . UserLog))
+    . interpret handleEmulatedWalletAPI
     . interpret (handleEmulatorControl @_ @effs)
     . interpret (handleWaiting @_ @effs)
     . interpret (handleRunContract @_ @effs)
-    . raiseEnd4
+    . raiseEnd5
 
 -- | Run a 'Trace Emulator', streaming the log messages as they arrive
 runEmulatorStream :: forall effs a.
@@ -144,5 +148,5 @@ interpretEmulatorTrace conf action =
         $ interpret (mapLog (review schedulerEvent))
         $ runThreads
         $ do
-            launchSystemThreads wallets
+            raise $ launchSystemThreads wallets
             void $ handleEmulatorTrace action'

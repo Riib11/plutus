@@ -69,6 +69,7 @@ handleRunContractPlayground ::
     ( HasBlockchainActions s
     , ContractConstraints s
     , Show e
+    , JSON.ToJSON e
     , Member ContractInstanceIdEff effs
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , Member (LogMsg EmulatorEvent') effs2
@@ -90,6 +91,7 @@ handleLaunchContract ::
     ( HasBlockchainActions s
     , ContractConstraints s
     , Show e
+    , JSON.ToJSON e
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , Member ContractInstanceIdEff effs
     , Member (LogMsg EmulatorEvent') effs2
