@@ -104,7 +104,7 @@ instanceState con tag =
                     JSON.Error e' -> throwError $ JSONDecodingError e' response
                     JSON.Success e' -> pure (Just e')
 
-    in preMapMaybeM decode $ L.generalize $ Fold (flip addEventInstanceState) (emptyInstanceState con) id
+    in preMapMaybeM decode $ L.generalize $ Fold (flip $ addEventInstanceState con) (emptyInstanceState con) id
 
 -- | The list of open requests of the contract instance at its latest iteration
 instanceRequests ::
