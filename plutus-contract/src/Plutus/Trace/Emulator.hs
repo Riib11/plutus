@@ -81,7 +81,7 @@ import Plutus.Trace.Effects.RunContract (RunContract, handleRunContract)
 import qualified Plutus.Trace.Effects.RunContract as RunContract
 import Plutus.Trace.Effects.Waiting (Waiting, handleWaiting)
 import qualified Plutus.Trace.Effects.Waiting as Waiting
-import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError)
+import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError)
 import           Plutus.Trace.Emulator.System                    (launchSystemThreads)
 import           Plutus.Trace.Emulator.Types                     (ContractConstraints, ContractHandle (..), Emulator,
                                                                   EmulatorMessage (..), EmulatorThreads, ContractInstanceTag, UserThreadMsg(..))
@@ -102,7 +102,7 @@ handleEmulatorTrace ::
     ( Member MultiAgentEffect effs
     , Member (State EmulatorThreads) effs
     , Member (State EmulatorState) effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , Member (LogMsg EmulatorEvent') effs
     , Member ContractInstanceIdEff effs
     )
@@ -127,7 +127,7 @@ runEmulatorStream conf = runTraceStream conf . interpretEmulatorTrace conf
 --   blockchain effects.
 interpretEmulatorTrace :: forall effs a.
     ( Member MultiAgentEffect effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , Member ChainEffect effs
     , Member ChainControlEffect effs
     , Member (LogMsg EmulatorEvent') effs

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -10,6 +11,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-strictness #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS -fplugin-opt Language.PlutusTx.Plugin:debug-context #-}
@@ -28,6 +30,8 @@ module Language.PlutusTx.Coordination.Contracts.PingPong(
 
 import           Control.Lens
 import           Control.Monad                         (void)
+import GHC.Generics (Generic)
+import Data.Aeson (ToJSON, FromJSON)
 import qualified Language.PlutusTx                     as PlutusTx
 import           Language.PlutusTx.Prelude             hiding (Applicative (..), check)
 import qualified Ledger.Ada                            as Ada
@@ -41,7 +45,8 @@ import qualified Language.Plutus.Contract.StateMachine as SM
 import           Language.Plutus.Contract
 
 data PingPongState = Pinged | Ponged | Stopped
-    deriving stock Show
+    deriving stock (Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 instance Eq PingPongState where
     Pinged == Pinged = True
@@ -49,7 +54,8 @@ instance Eq PingPongState where
     _ == _           = False
 
 data Input = Ping | Pong | Stop
-    deriving stock Show
+    deriving stock (Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 type PingPongSchema =
     BlockchainActions
@@ -63,7 +69,8 @@ data PingPongError =
     PingPongContractError ContractError
     | PingPongSMError SM.SMContractError
     | StoppedUnexpectedly
-    deriving stock (Show)
+    deriving stock (Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 makeClassyPrisms ''PingPongError
 

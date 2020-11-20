@@ -47,7 +47,7 @@ import qualified Streaming as S
 
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
 import           Language.Plutus.Contract.Trace                  (InitialDistribution, defaultDist)
-import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError)
+import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError)
 
 -- | Finish the stream at the end of the given slot.
 takeUntilSlot :: forall effs a. Slot -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
@@ -85,7 +85,7 @@ runTraceStream :: forall effs.
             , MultiAgentEffect
             , ChainEffect
             , ChainControlEffect
-            , Error ContractInstanceError
+            , Error EmulatorRuntimeError
             ] ()
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
 runTraceStream conf =  
@@ -121,7 +121,7 @@ initialState EmulatorConfig{_initialDistribution} = EM.emulatorStateInitialDist 
 data EmulatorErr =
     WalletErr WalletAPIError
     | AssertionErr EM.AssertionError
-    | InstanceErr ContractInstanceError
+    | InstanceErr EmulatorRuntimeError
     deriving (Show)
 
 handleLogCoroutine :: forall e effs.

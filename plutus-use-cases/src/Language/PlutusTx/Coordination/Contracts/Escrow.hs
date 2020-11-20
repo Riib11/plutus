@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE LambdaCase           #-}
@@ -9,6 +10,8 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS -fplugin-opt Language.PlutusTx.Plugin:debug-context #-}
 -- | A general-purpose escrow contract in Plutus
 module Language.PlutusTx.Coordination.Contracts.Escrow(
@@ -40,6 +43,8 @@ module Language.PlutusTx.Coordination.Contracts.Escrow(
 import           Control.Lens                      (makeClassyPrisms, review)
 import           Control.Monad                     (void)
 import           Control.Monad.Error.Lens          (throwing)
+import GHC.Generics (Generic)
+import Data.Aeson (ToJSON, FromJSON)
 
 import           Ledger                            (Datum (..), DatumHash, PubKeyHash, Slot, TxId, TxOutTx (..),
                                                     ValidatorHash, interval, scriptOutputsAt, txId, txSignedBy,
@@ -70,13 +75,15 @@ type EscrowSchema =
         .\/ Endpoint "refund-escrow" ()
 
 data RedeemFailReason = DeadlinePassed | NotEnoughFundsAtAddress
-    deriving (Haskell.Eq, Show)
+    deriving stock (Haskell.Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 data EscrowError =
     RedeemFailed RedeemFailReason
     | RefundFailed
     | EContractError ContractError
-    deriving Show
+    deriving stock (Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 makeClassyPrisms ''EscrowError
 
@@ -297,7 +304,8 @@ redeem inst escrow = mapError (review _EscrowError) $ do
          else RedeemSuccess . txId <$> submitTxConstraintsSpending inst unspentOutputs tx
 
 newtype RefundSuccess = RefundSuccess TxId
-    deriving (Haskell.Eq, Show)
+    deriving newtype (Haskell.Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | 'refund' with an endpoint.
 refundEp

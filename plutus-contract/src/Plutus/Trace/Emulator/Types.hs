@@ -34,7 +34,7 @@ module Plutus.Trace.Emulator.Types(
     , cilId
     , cilMessage
     , cilTag
-    , ContractInstanceError(..)
+    , EmulatorRuntimeError(..)
     , ContractInstanceMsg(..)
     , _Started
     , _StoppedNoError
@@ -118,14 +118,14 @@ data ContractHandle s e =
         , chInstanceTag :: ContractInstanceTag
         }
 
-data ContractInstanceError =
+data EmulatorRuntimeError =
     ThreadIdNotFound ContractInstanceId
     | InstanceIdNotFound Wallet
     | JSONDecodingError String
     deriving stock (Eq, Ord, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
-instance Pretty ContractInstanceError where
+instance Pretty EmulatorRuntimeError where
     pretty = \case
         ThreadIdNotFound i -> "Thread ID not found:" <+> pretty i
         InstanceIdNotFound w -> "Instance ID not found:" <+> pretty w
@@ -145,7 +145,7 @@ walletInstanceTag (Wallet i) = fromString $ "Contract instance for wallet " <> s
 
 -- | Log message produced by the user (main) thread
 data UserThreadMsg =
-    UserThreadErr ContractInstanceError
+    UserThreadErr EmulatorRuntimeError
     | UserLog String
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -164,7 +164,7 @@ data ContractInstanceMsg =
     | NoRequestsHandled
     | HandledRequest (Response JSON.Value)
     | CurrentRequests [Request JSON.Value]
-    | InstErr ContractInstanceError
+    | InstErr EmulatorRuntimeError
     | ContractLog JSON.Value
     | SendingNotification Notification
     | NotificationSuccess Notification

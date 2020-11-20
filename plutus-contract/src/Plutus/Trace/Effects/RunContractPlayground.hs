@@ -37,9 +37,9 @@ import qualified Data.Aeson             as JSON
 import Data.Map (Map)
 import           Language.Plutus.Contract                      (Contract (..), HasBlockchainActions, ContractInstanceId)
 import Wallet.Emulator.Wallet (Wallet)
-import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError, contractThread, getThread)
+import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError, contractThread, getThread)
 import           Plutus.Trace.Emulator.Types                     (ContractConstraints, ContractHandle (..),
-                                                                  EmulatorMessage (..), EmulatorThreads, ContractInstanceError(..), walletInstanceTag)
+                                                                  EmulatorMessage (..), EmulatorThreads, EmulatorRuntimeError(..), walletInstanceTag)
 import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, nextId)
 import           Plutus.Trace.Scheduler                          (Priority (..), SysCall (..), SystemCall,
                                                                   fork, mkSysCall)
@@ -73,7 +73,7 @@ handleRunContractPlayground ::
     , Member ContractInstanceIdEff effs
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , Member (LogMsg EmulatorEvent') effs2
-    , Member (Error ContractInstanceError) effs2
+    , Member (Error EmulatorRuntimeError) effs2
     , Member (State EmulatorThreads) effs2
     , Member MultiAgentEffect effs2
     , Member (State (Map Wallet ContractInstanceId)) effs2
@@ -95,7 +95,7 @@ handleLaunchContract ::
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , Member ContractInstanceIdEff effs
     , Member (LogMsg EmulatorEvent') effs2
-    , Member (Error ContractInstanceError) effs2
+    , Member (Error EmulatorRuntimeError) effs2
     , Member (State EmulatorThreads) effs2
     , Member MultiAgentEffect effs2
     , Member (State (Map Wallet ContractInstanceId)) effs
@@ -112,7 +112,7 @@ handleLaunchContract contract wllt = do
 handleCallEndpoint ::
     forall effs effs2.
     ( Member (State (Map Wallet ContractInstanceId)) effs2
-    , Member (Error ContractInstanceError) effs2
+    , Member (Error EmulatorRuntimeError) effs2
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , Member (State EmulatorThreads) effs2
     )
@@ -129,7 +129,7 @@ handleCallEndpoint wllt endpointName endpointValue = do
 
 getInstance ::
     ( Member (State (Map Wallet ContractInstanceId)) effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     )
     => Wallet
     -> Eff effs ContractInstanceId

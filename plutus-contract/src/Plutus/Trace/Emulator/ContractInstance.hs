@@ -17,7 +17,7 @@
 module Plutus.Trace.Emulator.ContractInstance(
     contractThread
     , getThread
-    , ContractInstanceError
+    , EmulatorRuntimeError
     -- * Instance state
     , ContractInstanceState(..)
     , emptyInstanceState
@@ -49,7 +49,7 @@ import           Language.Plutus.Contract.Trace.RequestHandler (RequestHandler (
                                                                 wrapHandler)
 import           Language.Plutus.Contract.Types                (ResumableResult (..))
 import           Plutus.Trace.Emulator.Types                   (ContractConstraints, ContractHandle (..),
-                                                                ContractInstanceError (..), ContractInstanceLog (..),
+                                                                EmulatorRuntimeError (..), ContractInstanceLog (..),
                                                                 ContractInstanceMsg (..), EmulatorAgentThreadEffs,
                                                                 EmulatorMessage (..), EmulatorThreads,
                                                                 instanceIdThreads, ContractInstanceState(..), emptyInstanceState, addEventInstanceState)
@@ -99,7 +99,7 @@ handleContractRuntime = interpret $ \case
 contractThread :: forall s e effs.
     ( Member (State EmulatorThreads) effs
     , Member MultiAgentEffect effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , ContractConstraints s
     , HasBlockchainActions s
     , Show e
@@ -129,7 +129,7 @@ registerInstance i t = modify (instanceIdThreads . at i .~ Just t)
 
 getThread :: forall effs.
     ( Member (State EmulatorThreads) effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     )
     => ContractInstanceId
     -> Eff effs ThreadId
@@ -153,7 +153,7 @@ runInstance :: forall s e effs.
     ( Member MultiAgentEffect effs
     , ContractConstraints s
     , HasBlockchainActions s
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , Show e
     , JSON.ToJSON e
     )
@@ -217,7 +217,7 @@ decodeEvent ::
     forall s effs.
     ( ContractConstraints s
     , Member (LogMsg ContractInstanceMsg) effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     )
     => JSON.Value
     -> Eff effs (Event s)

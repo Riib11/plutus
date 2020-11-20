@@ -44,7 +44,7 @@ import           Language.Plutus.Contract.Schema    (Input, Output)
 import qualified Data.Aeson                         as JSON
 import qualified Language.Plutus.Contract.Effects.ExposeEndpoint as Endpoint
 import Wallet.Emulator.Wallet (Wallet(..))
-import           Plutus.Trace.Emulator.Types (EmulatorThreads, EmulatorMessage(EndpointCall), ContractInstanceState(..),ContractInstanceError(JSONDecodingError), UserThreadMsg(UserThreadErr))
+import           Plutus.Trace.Emulator.Types (EmulatorThreads, EmulatorMessage(EndpointCall), ContractInstanceState(..),EmulatorRuntimeError(JSONDecodingError), UserThreadMsg(UserThreadErr))
 import           Plutus.Trace.Emulator.ContractInstance          (contractThread, getThread)
 import           Plutus.Trace.Scheduler (SystemCall, fork, Tag, Priority(..), mkSysCall, SysCall(Message), ThreadId, sleep)
 import           Wallet.Emulator.MultiAgent (MultiAgentEffect, EmulatorEvent'(..))
@@ -87,8 +87,8 @@ activateContractWallet w contract = activateContract w contract (walletInstanceT
 --   emulator thread.
 handleRunContract :: forall effs effs2.
     ( Member (State EmulatorThreads) effs2
-    , Member (Error ContractInstanceError) effs2
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs2
+    , Member (Error EmulatorRuntimeError) effs
     , Member MultiAgentEffect effs2
     , Member (LogMsg EmulatorEvent') effs2
     , Member (LogMsg EmulatorEvent') effs
@@ -111,7 +111,7 @@ handleGetContractState ::
     ( Member (State EmulatorThreads) effs
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , Member (Reader ThreadId) effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , ContractConstraints s
     , JSON.FromJSON e
     , Member (LogMsg UserThreadMsg) effs
@@ -139,7 +139,7 @@ handleActivate :: forall s e effs effs2.
     , Member ContractInstanceIdEff effs
     , Member (State EmulatorThreads) effs2
     , Member MultiAgentEffect effs2
-    , Member (Error ContractInstanceError) effs2
+    , Member (Error EmulatorRuntimeError) effs2
     , Member (LogMsg EmulatorEvent') effs2
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     , HasBlockchainActions s
@@ -163,7 +163,7 @@ handleCallEndpoint :: forall s l e ep effs effs2.
     ( ContractConstraints s
     , HasEndpoint l ep s
     , Member (State EmulatorThreads) effs2
-    , Member (Error ContractInstanceError) effs2
+    , Member (Error EmulatorRuntimeError) effs2
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     )
     => Proxy l

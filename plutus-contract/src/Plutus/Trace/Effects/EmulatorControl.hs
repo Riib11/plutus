@@ -29,7 +29,7 @@ import Wallet.Types (ContractInstanceId)
 import Wallet.Emulator.Chain (ChainState)
 import Plutus.Trace.Scheduler (SystemCall, mkSysCall, Priority(Normal), SysCall(Message, Thaw))
 import Plutus.Trace.Emulator.Types (EmulatorMessage(Freeze), EmulatorThreads)
-import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError, getThread)
+import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError, getThread)
 import qualified Wallet.Emulator.Wallet                          as W
 import qualified Wallet.Emulator                                 as EM
 import           Wallet.Emulator.MultiAgent (walletControlAction, MultiAgentEffect, EmulatorState)
@@ -45,7 +45,7 @@ handleEmulatorControl ::
     forall effs effs2.
     ( Member (State EmulatorThreads) effs
     , Member (State EmulatorState) effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , Member MultiAgentEffect effs
     , Member (Yield (SystemCall effs2 EmulatorMessage) (Maybe EmulatorMessage)) effs
     )

@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE ConstraintKinds   #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveGeneric     #-}
@@ -28,6 +30,7 @@ module Language.PlutusTx.Coordination.Contracts.Vesting (
 import           Control.Lens
 import           Control.Monad                     (void, when)
 import qualified Data.Map                          as Map
+import Data.Aeson (ToJSON, FromJSON)
 import           Prelude                           (Semigroup (..))
 
 import           GHC.Generics                      (Generic)
@@ -159,7 +162,8 @@ contractAddress = Scripts.scriptAddress . scriptInstance
 data VestingError =
     VContractError ContractError
     | InsufficientFundsError Value Value Value
-    deriving (Haskell.Eq, Show)
+    deriving stock (Haskell.Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 makeClassyPrisms ''VestingError
 

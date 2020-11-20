@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE MonoLocalBinds    #-}
@@ -16,6 +19,8 @@ import           Control.Lens
 import           Control.Monad            (void)
 import           Control.Monad.Error.Lens
 import           Data.Text                (Text)
+import GHC.Generics (Generic)
+import Data.Aeson (ToJSON, FromJSON)
 
 import           Language.Plutus.Contract
 
@@ -39,7 +44,8 @@ data MyError =
     Error1 Text
     | Error2
     | MyContractError ContractError
-    deriving Show
+    deriving stock (Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 makeClassyPrisms ''MyError
 

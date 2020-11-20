@@ -50,7 +50,7 @@ import           Wallet.Emulator.MultiAgent                      (EmulatorEvent'
                                                                   MultiAgentEffect,
                                                                   schedulerEvent, EmulatorEvent)
 import Wallet.Types (ContractInstanceId)
-import           Plutus.Trace.Emulator.ContractInstance          (ContractInstanceError)
+import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError)
 import           Plutus.Trace.Emulator.System                    (launchSystemThreads)
 import           Plutus.Trace.Emulator.Types                     (ContractConstraints, 
                                                                   EmulatorMessage (..), EmulatorThreads)
@@ -78,7 +78,7 @@ handlePlaygroundTrace ::
     , JSON.ToJSON e
     , Member MultiAgentEffect effs
     , Member (LogMsg EmulatorEvent') effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , Member (State (Map Wallet ContractInstanceId)) effs
     , Member (State EmulatorThreads) effs
     , Member ContractInstanceIdEff effs
@@ -108,7 +108,7 @@ runPlaygroundStream conf contract = runTraceStream conf . interpretPlaygroundTra
 
 interpretPlaygroundTrace :: forall s e effs a.
     ( Member MultiAgentEffect effs
-    , Member (Error ContractInstanceError) effs
+    , Member (Error EmulatorRuntimeError) effs
     , Member ChainEffect effs
     , Member ChainControlEffect effs
     , Member (LogMsg EmulatorEvent') effs
