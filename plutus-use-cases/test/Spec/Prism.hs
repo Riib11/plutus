@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications  #-}
 module Spec.Prism(tests) where
 
-import Control.Monad (void)
+import           Control.Monad                                             (void)
 import           Data.Foldable                                             (traverse_)
 import           Language.Plutus.Contract.Test
 import           Language.PlutusTx.Lattice
@@ -19,7 +19,7 @@ import           Language.PlutusTx.Coordination.Contracts.Prism            hidin
 import qualified Language.PlutusTx.Coordination.Contracts.Prism.Credential as Credential
 import           Language.PlutusTx.Coordination.Contracts.Prism.STO        (STOData (..))
 import qualified Language.PlutusTx.Coordination.Contracts.Prism.STO        as STO
-import qualified Plutus.Trace.Emulator    as Trace
+import qualified Plutus.Trace.Emulator                                     as Trace
 
 user, credentialManager, mirror, issuer :: Wallet
 user = Wallet 1

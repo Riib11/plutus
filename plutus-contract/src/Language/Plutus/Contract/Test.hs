@@ -1,18 +1,18 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE AllowAmbiguousTypes  #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE DerivingVia          #-}
 {-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
 {-# LANGUAGE KindSignatures       #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- | Testing contracts with HUnit and Tasty
 module Language.Plutus.Contract.Test(
@@ -52,17 +52,16 @@ module Language.Plutus.Contract.Test(
     , maxSlot
     ) where
 
-import Control.Applicative (liftA2)
-import           Control.Lens                                    (at, (^.), makeLenses)
+import           Control.Applicative                             (liftA2)
+import           Control.Foldl                                   (FoldM)
+import qualified Control.Foldl                                   as L
+import           Control.Lens                                    (at, makeLenses, (^.))
 import           Control.Monad                                   (guard, unless)
-import Control.Foldl (FoldM)
-import qualified Control.Foldl as L
-import           Control.Monad.Freer                             (Eff, runM, sendM, reinterpret)
-import Control.Monad.Freer.Error (Error, runError)
-import           Control.Monad.Freer.Log                         (LogMessage (..), LogLevel(..))
-import Ledger.Tx (Tx)
-import Control.Monad.Freer.Reader
-import Control.Monad.Freer.Writer (Writer(..), tell)
+import           Control.Monad.Freer                             (Eff, reinterpret, runM, sendM)
+import           Control.Monad.Freer.Error                       (Error, runError)
+import           Control.Monad.Freer.Log                         (LogLevel (..), LogMessage (..))
+import           Control.Monad.Freer.Reader
+import           Control.Monad.Freer.Writer                      (Writer (..), tell)
 import           Data.Foldable                                   (fold, toList)
 import           Data.Maybe                                      (mapMaybe)
 import           Data.Proxy                                      (Proxy (..))
@@ -73,6 +72,7 @@ import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Render.Text           (renderStrict)
 import           Data.Void
 import           GHC.TypeLits                                    (KnownSymbol, Symbol, symbolVal)
+import           Ledger.Tx                                       (Tx)
 import qualified Test.Tasty.HUnit                                as HUnit
 import           Test.Tasty.Providers                            (TestTree)
 
@@ -98,15 +98,15 @@ import           Wallet.Emulator                                 (EmulatorEvent,
 
 import           Language.Plutus.Contract.Schema                 (Event (..), Handlers (..), Input, Output)
 import           Language.Plutus.Contract.Trace                  as X
-import Plutus.Trace.Emulator (EmulatorConfig(..), EmulatorTrace)
 import           Plutus.Trace                                    (defaultEmulatorConfig)
-import           Plutus.Trace.Emulator                           (runEmulatorStream)
-import qualified Wallet.Emulator.Folds as Folds
-import Wallet.Emulator.Folds (EmulatorFoldErr, postMapM, Outcome(..))
-import Plutus.Trace.Emulator.Types (ContractInstanceTag, ContractConstraints, ContractInstanceLog, UserThreadMsg)
-import Wallet.Emulator.Stream (takeUntilSlot, foldEmulatorStreamM, filterLogLevel)
-import qualified Streaming.Prelude as S
-import qualified Streaming as S
+import           Plutus.Trace.Emulator                           (EmulatorConfig (..), EmulatorTrace, runEmulatorStream)
+import           Plutus.Trace.Emulator.Types                     (ContractConstraints, ContractInstanceLog,
+                                                                  ContractInstanceTag, UserThreadMsg)
+import qualified Streaming                                       as S
+import qualified Streaming.Prelude                               as S
+import           Wallet.Emulator.Folds                           (EmulatorFoldErr, Outcome (..), postMapM)
+import qualified Wallet.Emulator.Folds                           as Folds
+import           Wallet.Emulator.Stream                          (filterLogLevel, foldEmulatorStreamM, takeUntilSlot)
 
 type TracePredicate = FoldM (Eff '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]) EmulatorEvent Bool
 
@@ -118,11 +118,11 @@ infixl 3 .&&.
 not :: TracePredicate -> TracePredicate
 not = fmap Prelude.not
 
--- | Options for running the 
+-- | Options for running the
 data CheckOptions =
     CheckOptions
         { _minLogLevel :: LogLevel -- ^ Minimum log level for emulator log messages to be included in the test output (printed if the test fails)
-        , _maxSlot :: Slot -- ^ When to stop the emulator
+        , _maxSlot     :: Slot -- ^ When to stop the emulator
         } deriving (Eq, Show)
 
 makeLenses ''CheckOptions
@@ -139,7 +139,7 @@ type TestEffects = '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (
 -- | Check if the emulator trace meets the condition
 checkPredicate ::
     String -- ^ Descriptive name of the test
-    -> TracePredicate -- ^ The predicate to check 
+    -> TracePredicate -- ^ The predicate to check
     -> EmulatorTrace ()
     -> TestTree
 checkPredicate = checkPredicateOptions defaultCheckOptions
@@ -148,7 +148,7 @@ checkPredicate = checkPredicateOptions defaultCheckOptions
 checkPredicateOptions ::
     CheckOptions -- ^ Options to use
     -> String -- ^ Descriptive name of the test
-    -> TracePredicate -- ^ The predicate to check 
+    -> TracePredicate -- ^ The predicate to check
     -> EmulatorTrace ()
     -> TestTree
 checkPredicateOptions CheckOptions{_minLogLevel, _maxSlot} nm predicate action = HUnit.testCaseSteps nm $ \step -> do
@@ -189,7 +189,7 @@ endpointAvailable
     => Contract s e a
     -> ContractInstanceTag
     -> TracePredicate
-endpointAvailable contract inst = 
+endpointAvailable contract inst =
     flip postMapM (Folds.instanceRequests contract inst) $ \rqs -> do
         if any (Endpoints.isActive @l @s) (rqRequest <$> rqs)
             then pure True
@@ -206,7 +206,7 @@ interestingAddress
     -> ContractInstanceTag
     -> Address
     -> TracePredicate
-interestingAddress contract inst addr = 
+interestingAddress contract inst addr =
     flip postMapM (Folds.instanceRequests contract inst) $ \rqs -> do
         let hks = mapMaybe WatchAddress.watchedAddress (rqRequest <$> rqs)
         if any (== addr) hks
@@ -228,7 +228,7 @@ queryingUtxoAt
     -> ContractInstanceTag
     -> Address
     -> TracePredicate
-queryingUtxoAt contract inst addr = 
+queryingUtxoAt contract inst addr =
     flip postMapM (Folds.instanceRequests contract inst) $ \rqs -> do
         let hks = mapMaybe UtxoAt.utxoAtRequest (rqRequest <$> rqs)
         if any (== addr) hks
@@ -251,7 +251,7 @@ tx
     -> (UnbalancedTx -> Bool)
     -> String
     -> TracePredicate
-tx contract inst flt nm = 
+tx contract inst flt nm =
     flip postMapM (Folds.instanceTransactions contract inst) $ \unbalancedTxns -> do
         if any flt unbalancedTxns
         then pure True
@@ -278,7 +278,7 @@ assertEvents
     -> ([Event s] -> Bool)
     -> String
     -> TracePredicate
-assertEvents contract inst pr nm = 
+assertEvents contract inst pr nm =
     flip postMapM (Folds.instanceResponses contract inst) $ \rqs -> do
         let responses = fmap State.rspResponse rqs
             result = pr responses
@@ -309,7 +309,7 @@ waitingForSlot
     -> Slot
     -> TracePredicate
 waitingForSlot contract inst sl =
-    flip postMapM (Folds.instanceRequests contract inst) $ \rqs ->        
+    flip postMapM (Folds.instanceRequests contract inst) $ \rqs ->
         case mapMaybe (\e -> AwaitSlot.request e >>= guard . (==) sl) (rqRequest <$> rqs) of
             [] -> do
                 tell @(Doc Void) $ pretty inst <+> "not waiting for any slot notifications. Expected:" <+>  viaShow sl
@@ -336,7 +336,7 @@ assertHooks
     -> ([Handlers s] -> Bool)
     -> String
     -> TracePredicate
-assertHooks contract inst p nm = 
+assertHooks contract inst p nm =
     flip postMapM (Folds.instanceRequests contract inst) $ \rqs -> do
         let hks = rqRequest <$> rqs
             result = p hks
@@ -359,7 +359,7 @@ assertResponses
     -> ([Response (Event s)] -> Bool)
     -> String
     -> TracePredicate
-assertResponses contract inst p nm = 
+assertResponses contract inst p nm =
     flip postMapM (Folds.instanceResponses contract inst) $ \rqs -> do
         let result = p rqs
         unless result $ do
@@ -417,7 +417,7 @@ assertOutcome
     -> (Outcome e a -> Bool)
     -> String
     -> TracePredicate
-assertOutcome contract inst p nm = 
+assertOutcome contract inst p nm =
     flip postMapM (Folds.instanceOutcome contract inst) $ \outcome -> do
         let result = p outcome
         unless result $ do
@@ -429,7 +429,7 @@ assertOutcome contract inst p nm =
         pure result
 
 walletFundsChange :: Wallet -> Value -> TracePredicate
-walletFundsChange w dlt = 
+walletFundsChange w dlt =
     flip postMapM (L.generalize $ Folds.walletFunds w) $ \finalValue -> do
         initialDist <- ask @InitialDistribution
         let initialValue = fold (initialDist ^. at w)
@@ -452,14 +452,14 @@ assertFailedTransaction predicate =
 
 -- | Assert that no transaction failed to validate.
 assertNoFailedTransactions :: TracePredicate
-assertNoFailedTransactions = 
+assertNoFailedTransactions =
     flip postMapM (L.generalize Folds.failedTransactions) $ \case
         [] -> pure True
         xs -> do
             tell @(Doc Void) $ vsep ("Transactions failed to validate:" : fmap pretty xs)
             pure False
 
-assertInstanceLog :: 
+assertInstanceLog ::
     ContractInstanceTag
     -> ([EmulatorTimeEvent ContractInstanceLog] -> Bool)
     -> TracePredicate

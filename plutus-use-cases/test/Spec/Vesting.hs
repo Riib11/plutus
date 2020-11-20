@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns -fno-warn-unused-do-bind #-}
 module Spec.Vesting(tests, retrieveFundsTrace, vesting) where
 
-import Control.Monad (void)
+import           Control.Monad                                    (void)
 import           Test.Tasty
 import qualified Test.Tasty.HUnit                                 as HUnit
 
@@ -23,8 +23,8 @@ import qualified Ledger
 import qualified Ledger.Ada                                       as Ada
 
 import           Language.Plutus.Contract.Test
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
+import           Plutus.Trace.Emulator                            (EmulatorTrace)
+import qualified Plutus.Trace.Emulator                            as Trace
 import           Prelude                                          hiding (not)
 
 w1, w2 :: Wallet

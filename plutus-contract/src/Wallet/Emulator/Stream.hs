@@ -1,13 +1,13 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE MonoLocalBinds   #-}
+{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE RankNTypes       #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators    #-}
 -- | Running emulator actions that produce streams of events
 module Wallet.Emulator.Stream(
     -- * Emulator streams
@@ -24,30 +24,32 @@ module Wallet.Emulator.Stream(
     , foldEmulatorStreamM
     ) where
 
-import Control.Lens (preview, view, makeLenses, filtered)
-import Control.Monad.Freer (Eff, run, interpret, Member, type (~>), reinterpret, subsume)
-import           Control.Monad.Freer.Coroutine                   (Yield, yield)
-import Control.Monad.Freer.State (State, evalState, gets)
-import Control.Monad.Freer.Error (Error, runError)
-import           Control.Monad.Freer.Extras                      (raiseEnd6, wrapError)
-import Control.Monad.Freer.Stream (runStream)
-import qualified Control.Foldl as L
-import           Control.Monad.Freer.Log                         (LogMessage, logMessageContent, LogMsg(..), mapMLog, LogLevel, LogMessage(..))
-import qualified Data.Map                                        as Map
-import Ledger.Slot (Slot)
-import           Wallet.Emulator                                 (EmulatorEvent, EmulatorEvent')
-import           Wallet.API                                      (WalletAPIError)
-import Wallet.Emulator.MultiAgent (eteEvent, chainEvent, EmulatorState, MultiAgentEffect, EmulatorTimeEvent(..))
-import Wallet.Emulator.Chain (_SlotAdd, ChainEffect, ChainControlEffect)
-import qualified Wallet.Emulator                                 as EM
-import qualified Streaming.Prelude as S
-import Streaming (Stream)
-import Streaming.Prelude (Of)
-import qualified Streaming as S
+import qualified Control.Foldl                          as L
+import           Control.Lens                           (filtered, makeLenses, preview, view)
+import           Control.Monad.Freer                    (Eff, Member, interpret, reinterpret, run, subsume, type (~>))
+import           Control.Monad.Freer.Coroutine          (Yield, yield)
+import           Control.Monad.Freer.Error              (Error, runError)
+import           Control.Monad.Freer.Extras             (raiseEnd6, wrapError)
+import           Control.Monad.Freer.Log                (LogLevel, LogMessage (..), LogMsg (..), logMessageContent,
+                                                         mapMLog)
+import           Control.Monad.Freer.State              (State, evalState, gets)
+import           Control.Monad.Freer.Stream             (runStream)
+import qualified Data.Map                               as Map
+import           Ledger.Slot                            (Slot)
+import           Streaming                              (Stream)
+import qualified Streaming                              as S
+import           Streaming.Prelude                      (Of)
+import qualified Streaming.Prelude                      as S
+import           Wallet.API                             (WalletAPIError)
+import           Wallet.Emulator                        (EmulatorEvent, EmulatorEvent')
+import qualified Wallet.Emulator                        as EM
+import           Wallet.Emulator.Chain                  (ChainControlEffect, ChainEffect, _SlotAdd)
+import           Wallet.Emulator.MultiAgent             (EmulatorState, EmulatorTimeEvent (..), MultiAgentEffect,
+                                                         chainEvent, eteEvent)
 
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
-import           Language.Plutus.Contract.Trace                  (InitialDistribution, defaultDist)
-import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError)
+import           Language.Plutus.Contract.Trace         (InitialDistribution, defaultDist)
+import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 
 -- | Finish the stream at the end of the given slot.
 takeUntilSlot :: forall effs a. Slot -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
@@ -88,7 +90,7 @@ runTraceStream :: forall effs.
             , Error EmulatorRuntimeError
             ] ()
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
-runTraceStream conf =  
+runTraceStream conf =
     fmap (either Just (const Nothing))
     . S.hoist (pure . run)
     . runStream @(LogMessage EmulatorEvent) @_ @'[]
@@ -106,7 +108,7 @@ runTraceStream conf =
 
 newtype EmulatorConfig =
     EmulatorConfig
-        { _initialDistribution :: InitialDistribution 
+        { _initialDistribution :: InitialDistribution
         }
 
 defaultEmulatorConfig :: EmulatorConfig

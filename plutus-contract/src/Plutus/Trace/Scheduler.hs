@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
@@ -9,6 +8,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -44,18 +44,18 @@ import           Control.Monad.Freer.Coroutine
 import           Control.Monad.Freer.Log          (LogMsg, logDebug)
 import           Control.Monad.Freer.Reader
 import           Data.Aeson                       (FromJSON, ToJSON)
-import           Data.Hashable                    (Hashable)
 import           Data.HashMap.Strict              (HashMap)
 import qualified Data.HashMap.Strict              as HashMap
 import           Data.HashSet                     (HashSet)
 import qualified Data.HashSet                     as HashSet
+import           Data.Hashable                    (Hashable)
 import           Data.Map                         as Map
 import           Data.Sequence                    (Seq (..))
 import qualified Data.Sequence                    as Seq
 import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Extras (PrettyShow (..), Tagged (..))
 import           GHC.Generics                     (Generic)
-import Plutus.Trace.Tag (Tag)
+import           Plutus.Trace.Tag                 (Tag)
 
 newtype ThreadId = ThreadId { unThreadId :: Int }
     deriving stock (Eq, Ord, Show, Generic)

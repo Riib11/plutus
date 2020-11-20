@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
 {- Interpreting the 'Yield' effect as a stream -}
@@ -7,10 +7,10 @@ module Control.Monad.Freer.Stream(
     ) where
 
 import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine                   (Yield, Status(..), runC)
-import Streaming (Stream)
-import Streaming.Prelude (Of)
-import qualified Streaming.Prelude as S
+import           Control.Monad.Freer.Coroutine (Status (..), Yield, runC)
+import           Streaming                     (Stream)
+import           Streaming.Prelude             (Of)
+import qualified Streaming.Prelude             as S
 
 -- | Turn the @Yield e ()@ effect into a pull-based stream
 --   of @e@ events.
@@ -22,6 +22,6 @@ runStream action =
         f a = do
             result <- a
             case result of
-                Done b -> pure (Left b)
+                Done b          -> pure (Left b)
                 Continue e cont -> pure $ Right (e, cont ())
     in S.unfoldr f (runC action)

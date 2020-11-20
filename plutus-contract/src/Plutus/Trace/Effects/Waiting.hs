@@ -1,11 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeOperators       #-}
 -- | Waiting for things to happen
 module Plutus.Trace.Effects.Waiting(
     Waiting(..)
@@ -15,14 +15,13 @@ module Plutus.Trace.Effects.Waiting(
     , handleWaiting
     ) where
 
-import Ledger.Slot (Slot)
-import Control.Monad.Freer (Member)
-import Control.Monad.Freer.Coroutine (Yield)
-import Control.Monad.Freer (type (~>), Eff)
-import Control.Monad.Freer.TH (makeEffect)
-import           Numeric.Natural                    (Natural)
-import Plutus.Trace.Emulator.Types (EmulatorMessage(NewSlot))
-import Plutus.Trace.Scheduler (SystemCall, Priority(Sleeping), sleep)
+import           Control.Monad.Freer           (Eff, Member, type (~>))
+import           Control.Monad.Freer.Coroutine (Yield)
+import           Control.Monad.Freer.TH        (makeEffect)
+import           Ledger.Slot                   (Slot)
+import           Numeric.Natural               (Natural)
+import           Plutus.Trace.Emulator.Types   (EmulatorMessage (NewSlot))
+import           Plutus.Trace.Scheduler        (Priority (Sleeping), SystemCall, sleep)
 
 data Waiting r where
     WaitUntilSlot :: Slot -> Waiting Slot
@@ -40,7 +39,7 @@ waitNSlots ::
     ( Member Waiting effs )
     => Natural
     -> Eff effs Slot
-waitNSlots n 
+waitNSlots n
     | n > 1 = nextSlot >> waitNSlots (n - 1)
     | otherwise = nextSlot
 

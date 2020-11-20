@@ -1,12 +1,12 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 module Plutus.Trace.Tag(Tag(..)) where
 
-import Data.String (IsString(..))
-import Data.Text (Text)
-import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON)
-import Data.Text.Prettyprint.Doc (Pretty(..), braces)
+import           Data.Aeson                (FromJSON, ToJSON)
+import           Data.String               (IsString (..))
+import           Data.Text                 (Text)
+import           Data.Text.Prettyprint.Doc (Pretty (..), braces)
+import           GHC.Generics              (Generic)
 
 -- | A human-readably piece of data, used to identify threads and contract
 --   instances

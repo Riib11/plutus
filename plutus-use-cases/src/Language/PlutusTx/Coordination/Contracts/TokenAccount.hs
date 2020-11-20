@@ -41,7 +41,7 @@ import           Control.Lens
 import           Control.Monad                                     (void)
 import           Control.Monad.Error.Lens
 import           Data.Aeson                                        (FromJSON, ToJSON)
-import qualified Data.Map as Map
+import qualified Data.Map                                          as Map
 import           Data.Text.Prettyprint.Doc
 import           GHC.Generics                                      (Generic)
 

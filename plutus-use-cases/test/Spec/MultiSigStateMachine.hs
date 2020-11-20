@@ -24,12 +24,10 @@ import qualified Wallet.Emulator                                               a
 
 import           Language.Plutus.Contract.Test
 import qualified Language.PlutusTx                                             as PlutusTx
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
 import           Language.PlutusTx.Coordination.Contracts.MultiSigStateMachine (MultiSigError, MultiSigSchema)
 import qualified Language.PlutusTx.Coordination.Contracts.MultiSigStateMachine as MS
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
+import           Plutus.Trace.Emulator                                         (EmulatorTrace)
+import qualified Plutus.Trace.Emulator                                         as Trace
 
 tests :: TestTree
 tests =

@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE RecordWildCards  #-}
 
@@ -14,10 +14,10 @@ module Wallet.Rollup
     , getAnnotatedTransactions
     ) where
 
-import           Control.Lens             (assign, ifoldr, over, use, view, (&), set, (^.))
+import           Control.Lens             (assign, ifoldr, over, set, use, view, (&), (^.))
 import           Control.Lens.Combinators (itraverse)
 import           Control.Monad.State      (StateT, evalStateT, runState)
-import Data.List (groupBy)
+import           Data.List                (groupBy)
 import           Data.Map                 (Map)
 import qualified Data.Map                 as Map
 import qualified Data.Set                 as Set
@@ -25,8 +25,8 @@ import           Language.PlutusTx.Monoid (inv)
 import           Ledger                   (Tx (Tx), TxIn (TxIn), TxOut (TxOut), Value, outValue, txInRef, txOutRefId,
                                            txOutRefIdx, txOutValue, txOutputs)
 import qualified Ledger.Tx                as Tx
+import           Wallet.Emulator.Chain    (ChainEvent (..))
 import           Wallet.Rollup.Types
-import Wallet.Emulator.Chain (ChainEvent(..))
 
 ------------------------------------------------------------
 txInputKey :: TxIn -> TxKey
@@ -105,7 +105,7 @@ getAnnotatedTransactions = groupBy (equating (slotIndex . sequenceId)) . reverse
 handleChainEvent :: RollupState -> ChainEvent -> RollupState
 handleChainEvent s = \case
     SlotAdd _ -> s & over currentSequenceId (set txIndexL 0 . over slotIndexL succ)
-    TxnValidate tx -> 
+    TxnValidate tx ->
         let (tx', newState) = runState (annotateTransaction (s ^. currentSequenceId) tx) (s ^. rollup)
         in s & over currentSequenceId (over txIndexL succ)
              & over annotatedTransactions ((:) tx')

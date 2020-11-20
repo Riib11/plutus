@@ -6,23 +6,23 @@ module Spec.TokenAccount(tests, assertAccountBalance) where
 
 import           Test.Tasty
 
-import Control.Monad (void)
-import Control.Monad.Freer (run)
-import Control.Monad.Freer.Error (runError)
-import Language.Plutus.Contract (Contract)
-import Wallet.Emulator.Stream (foldEmulatorStreamM, takeUntilSlot)
-import qualified Streaming.Prelude as S
+import           Control.Monad                                         (void)
+import           Control.Monad.Freer                                   (run)
+import           Control.Monad.Freer.Error                             (runError)
+import           Language.Plutus.Contract                              (Contract)
 import           Language.Plutus.Contract.Test
 import           Language.PlutusTx.Lattice
 import qualified Ledger
 import qualified Ledger.Ada                                            as Ada
 import           Ledger.Value                                          (TokenName, Value)
+import qualified Streaming.Prelude                                     as S
+import           Wallet.Emulator.Stream                                (foldEmulatorStreamM, takeUntilSlot)
 
 import           Language.PlutusTx.Coordination.Contracts.TokenAccount (Account (..), TokenAccountError,
                                                                         TokenAccountSchema, tokenAccountContract)
 import qualified Language.PlutusTx.Coordination.Contracts.TokenAccount as Accounts
-import qualified Plutus.Trace.Emulator    as Trace
-import qualified Wallet.Emulator.Folds as Folds
+import qualified Plutus.Trace.Emulator                                 as Trace
+import qualified Wallet.Emulator.Folds                                 as Folds
 
 tests :: TestTree
 tests = testGroup "token account"

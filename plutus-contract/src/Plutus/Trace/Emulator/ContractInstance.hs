@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE DataKinds           #-}
@@ -8,6 +7,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -25,20 +25,20 @@ module Plutus.Trace.Emulator.ContractInstance(
     ) where
 
 import           Control.Lens
-import           Control.Monad                                 (guard, unless, when, void)
+import           Control.Monad                                 (guard, unless, void, when)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Coroutine                 (Yield)
 import           Control.Monad.Freer.Error                     (Error, throwError)
 import           Control.Monad.Freer.Extras                    (raiseEnd11)
-import           Control.Monad.Freer.Log                       (LogMessage, LogMsg(..), LogObserve, logDebug, logError,
-                                                                logInfo, mapLog, logWarn)
+import           Control.Monad.Freer.Log                       (LogMessage, LogMsg (..), LogObserve, logDebug, logError,
+                                                                logInfo, logWarn, mapLog)
 import           Control.Monad.Freer.Reader                    (Reader, ask, runReader)
-import           Control.Monad.Freer.State                     (State, evalState, gets, modify, get, put)
+import           Control.Monad.Freer.State                     (State, evalState, get, gets, modify, put)
 import           Data.Aeson                                    (object)
-import qualified Data.Aeson as JSON
+import qualified Data.Aeson                                    as JSON
 import           Data.Foldable                                 (traverse_)
 import           Data.Sequence                                 (Seq)
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence                                 as Seq
 import qualified Data.Text                                     as T
 import           Language.Plutus.Contract                      (Contract (..), HasBlockchainActions)
 import           Language.Plutus.Contract.Resumable            (Request (..), Response (..))
@@ -49,10 +49,11 @@ import           Language.Plutus.Contract.Trace.RequestHandler (RequestHandler (
                                                                 wrapHandler)
 import           Language.Plutus.Contract.Types                (ResumableResult (..))
 import           Plutus.Trace.Emulator.Types                   (ContractConstraints, ContractHandle (..),
-                                                                EmulatorRuntimeError (..), ContractInstanceLog (..),
-                                                                ContractInstanceMsg (..), EmulatorAgentThreadEffs,
-                                                                EmulatorMessage (..), EmulatorThreads,
-                                                                instanceIdThreads, ContractInstanceState(..), emptyInstanceState, addEventInstanceState)
+                                                                ContractInstanceLog (..), ContractInstanceMsg (..),
+                                                                ContractInstanceState (..), EmulatorAgentThreadEffs,
+                                                                EmulatorMessage (..), EmulatorRuntimeError (..),
+                                                                EmulatorThreads, addEventInstanceState,
+                                                                emptyInstanceState, instanceIdThreads)
 import           Plutus.Trace.Scheduler                        (Priority (..), SysCall (..), SystemCall, ThreadId,
                                                                 mkSysCall, sleep)
 import qualified Wallet.API                                    as WAPI
@@ -61,8 +62,9 @@ import           Wallet.Effects                                (ChainIndexEffect
 import           Wallet.Emulator.LogMessages                   (TxBalanceMsg)
 import           Wallet.Emulator.MultiAgent                    (EmulatedWalletEffects, MultiAgentEffect, walletAction)
 import           Wallet.Emulator.Wallet                        (Wallet)
-import           Wallet.Types                                  (ContractInstanceId, Notification (..),
-                                                                NotificationError (..), EndpointDescription(..), EndpointValue(..))
+import           Wallet.Types                                  (ContractInstanceId, EndpointDescription (..),
+                                                                EndpointValue (..), Notification (..),
+                                                                NotificationError (..))
 
 -- | Effects available to threads that run in the context of specific
 --   agents (ie wallets)
@@ -145,7 +147,7 @@ logStopped :: forall s e effs.
     -> Eff effs ()
 logStopped ResumableResult{wcsFinalState} =
     case wcsFinalState of
-        Left e -> logWarn $ StoppedWithError $ show e
+        Left e  -> logWarn $ StoppedWithError $ show e
         Right _ -> logInfo $ StoppedNoError
 
 -- | Run an instance of a contract
@@ -206,7 +208,7 @@ runInstance contract event = do
                             Sleeping
 
                             -- If an event was handled we go to sleep with
-                            -- the 'Normal' priority, trying again after all 
+                            -- the 'Normal' priority, trying again after all
                             -- other active threads have had their turn
                             (const Normal)
                             response

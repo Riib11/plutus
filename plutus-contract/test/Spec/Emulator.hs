@@ -45,6 +45,7 @@ import           Ledger.Typed.Scripts       (wrapValidator)
 import           Ledger.Value               (CurrencySymbol, Value (Value))
 import qualified Ledger.Value               as Value
 import           LedgerBytes                as LedgerBytes
+import           Plutus.Trace.Emulator      (waitNSlots)
 import           Test.Tasty
 import           Test.Tasty.HUnit           (testCase)
 import qualified Test.Tasty.HUnit           as HUnit
@@ -57,7 +58,6 @@ import           Wallet.Emulator.MultiAgent (EmulatorEvent' (..), eteEvent)
 import qualified Wallet.Emulator.NodeClient as NC
 import           Wallet.Emulator.Types
 import qualified Wallet.Emulator.Wallet     as Wallet
-import Plutus.Trace.Emulator (waitNSlots)
 import qualified Wallet.Graph
 
 tests :: TestTree

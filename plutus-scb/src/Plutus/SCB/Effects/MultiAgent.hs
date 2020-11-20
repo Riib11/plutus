@@ -39,7 +39,7 @@ import           Control.Lens                       (AReview, Lens', Prism', ano
 import           Control.Monad.Freer                (Eff, Members, interpret, subsume, type (~>))
 import           Control.Monad.Freer.Error          (Error, handleError, throwError)
 import           Control.Monad.Freer.Extra.Log      (LogMsg)
-import           Control.Monad.Freer.Extras         (handleZoomedState, handleZoomedWriter, raiseEnd18, raiseEnd10)
+import           Control.Monad.Freer.Extras         (handleZoomedState, handleZoomedWriter, raiseEnd10, raiseEnd18)
 import           Control.Monad.Freer.Log            (LogLevel (..), LogMessage, LogObserve, handleLogWriter,
                                                      handleObserveLog, logMessage)
 import qualified Control.Monad.Freer.Log            as Log
@@ -78,7 +78,9 @@ import           Wallet.Emulator.MultiAgent         (EmulatorEvent, EmulatorTime
                                                      emulatorTimeEvent, walletClientEvent, walletEvent)
 import           Wallet.Emulator.NodeClient         (NodeClientControlEffect, NodeClientEvent)
 import qualified Wallet.Emulator.NodeClient         as NC
-import           Wallet.Emulator.Wallet             (Wallet, WalletState, SigningProcessControlEffect, SigningProcess ,defaultSigningProcess, handleSigningProcess, handleSigningProcessControl)
+import           Wallet.Emulator.Wallet             (SigningProcess, SigningProcessControlEffect, Wallet, WalletState,
+                                                     defaultSigningProcess, handleSigningProcess,
+                                                     handleSigningProcessControl)
 import qualified Wallet.Emulator.Wallet             as Wallet
 
 -- $multiagent

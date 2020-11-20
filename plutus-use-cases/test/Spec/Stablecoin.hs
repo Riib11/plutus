@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
@@ -9,7 +9,7 @@ module Spec.Stablecoin(
     ) where
 
 
-import Control.Monad (void)
+import           Control.Monad                                       (void)
 import           Language.Plutus.Contract.Test
 import           Language.PlutusTx.Lattice
 import           Language.PlutusTx.Numeric                           (negate, one, zero)
@@ -28,8 +28,8 @@ import           Test.Tasty
 import           Language.PlutusTx.Coordination.Contracts.Stablecoin (BC (..), ConversionRate, Input (..), RC (..),
                                                                       SC (..), SCAction (..), Stablecoin (..))
 import qualified Language.PlutusTx.Coordination.Contracts.Stablecoin as Stablecoin
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
+import           Plutus.Trace.Emulator                               (EmulatorTrace)
+import qualified Plutus.Trace.Emulator                               as Trace
 
 user :: Wallet
 user = Wallet 1
@@ -77,7 +77,7 @@ tests = testGroup "Stablecoin"
         .&&. assertNoFailedTransactions
         .&&. walletFundsChange user (Stablecoin.stableCoins coin 50 <> Stablecoin.reserveCoins coin 100 <> negate (initialDeposit <> initialFee <> Ada.lovelaceValueOf 50))
         )
-        $ do 
+        $ do
             hdl <- initialise
             mintReserveCoins (RC 100) one hdl
             -- Mint 50 stablecoins at a rate of 1 Ada: 1 USD

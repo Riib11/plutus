@@ -13,16 +13,16 @@ import qualified Spec.Lib                                                  as Li
 
 import qualified Language.PlutusTx                                         as PlutusTx
 
-import Control.Monad (void)
+import           Control.Monad                                             (void)
 import           Language.Plutus.Contract.Test
 import           Language.PlutusTx.Coordination.Contracts.GameStateMachine as G
 import           Language.PlutusTx.Lattice
 import qualified Ledger.Ada                                                as Ada
 import qualified Ledger.Typed.Scripts                                      as Scripts
 import           Ledger.Value                                              (Value)
+import           Plutus.Trace.Emulator                                     (EmulatorTrace)
+import qualified Plutus.Trace.Emulator                                     as Trace
 import qualified Wallet.Emulator                                           as EM
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
 
 tests :: TestTree
 tests =

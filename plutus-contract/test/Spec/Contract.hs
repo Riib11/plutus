@@ -1,41 +1,43 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 module Spec.Contract(tests) where
 
-import Control.Lens
-import           Control.Monad                                 (void, forever)
-import Control.Monad.Freer (Eff)
+import           Control.Lens
+import           Control.Monad                                 (forever, void)
 import           Control.Monad.Error.Lens
-import           Control.Monad.Freer.Log (LogLevel(..))
-import qualified Control.Monad.Freer.Log as Log
 import           Control.Monad.Except                          (catchError, throwError)
+import           Control.Monad.Freer                           (Eff)
+import           Control.Monad.Freer.Log                       (LogLevel (..))
+import qualified Control.Monad.Freer.Log                       as Log
 import           Test.Tasty
 
 import           Language.Plutus.Contract                      as Con
 import           Language.Plutus.Contract.Test
+import           Language.Plutus.Contract.Types                (ResumableResult (..))
 import           Language.Plutus.Contract.Util                 (loopM)
 import qualified Language.PlutusTx                             as PlutusTx
 import           Language.PlutusTx.Lattice
-import           Ledger                                        (Address, Slot, PubKey)
+import           Ledger                                        (Address, PubKey, Slot)
 import qualified Ledger                                        as Ledger
 import qualified Ledger.Ada                                    as Ada
 import qualified Ledger.Constraints                            as Constraints
 import qualified Ledger.Crypto                                 as Crypto
+import qualified Plutus.Trace                                  as Trace
+import           Plutus.Trace.Emulator                         (ContractInstanceTag, Emulator, EmulatorTrace,
+                                                                activateContract, callEndpoint)
+import           Plutus.Trace.Emulator.Types                   (ContractInstanceLog (..), ContractInstanceMsg (..),
+                                                                ContractInstanceState (..), UserThreadMsg (..))
 import           Prelude                                       hiding (not)
-import Plutus.Trace.Emulator (callEndpoint, activateContract, ContractInstanceTag, Emulator, EmulatorTrace)
-import Plutus.Trace.Emulator.Types (ContractInstanceLog(..), ContractInstanceMsg(..), UserThreadMsg(..), ContractInstanceState(..))
-import Language.Plutus.Contract.Types (ResumableResult(..))
-import qualified Plutus.Trace as Trace
 import qualified Wallet.Emulator                               as EM
 
 import qualified Language.Plutus.Contract.Effects.AwaitSlot    as AwaitSlot
@@ -50,7 +52,7 @@ tests =
 
         check :: Slot -> String -> Contract Schema ContractError () -> _ -> _
         check sl nm contract pred = run sl nm (pred contract) (void $ activateContract w1 contract tag)
-                
+
         tag :: ContractInstanceTag
         tag = "instance 1"
 
@@ -102,7 +104,7 @@ tests =
                 (endpointAvailable @"2" theContract tag
                     .&&. not (endpointAvailable @"1" theContract tag))
                 (activateContract w1 theContract tag >>= \hdl -> callEndpoint @"1" hdl 1)
-        
+
         , let theContract :: Contract Schema ContractError () = void $ endpoint @"1" @Int >> endpoint @"2" @Int
           in run 1 "call endpoint (3)"
                 (not (endpointAvailable @"2" theContract tag)
@@ -144,7 +146,7 @@ tests =
           in run 1 "throw an error"
                 (assertContractError theContract tag (\case { OtherError "error" -> True; _ -> False}) "failed to throw error")
                 (void $ activateContract w1 theContract tag)
-        
+
         , run 2 "pay to wallet"
             (walletFundsChange w1 (Ada.lovelaceValueOf (-20))
                 .&&. walletFundsChange w2 (Ada.lovelaceValueOf 20)
@@ -186,7 +188,7 @@ tests =
               matchLogs lgs =
                   case (EM._eteEvent <$> lgs) of
                             [ UserLog "Received contract state", UserLog "Final state: Right Nothing"] -> True
-                            _ -> False
+                            _                                                                          -> False
 
           in run 3 "contract state"
                 (assertUserLog matchLogs)

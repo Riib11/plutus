@@ -1,10 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE KindSignatures   #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeOperators    #-}
 -- | Interfacing with the wallet (for making payments)
 module Plutus.Trace.Effects.EmulatedWalletAPI(
     EmulatedWalletAPI(..)
@@ -13,17 +13,17 @@ module Plutus.Trace.Effects.EmulatedWalletAPI(
     , handleEmulatedWalletAPI
     ) where
 
-import qualified Wallet.Emulator                                 as EM
-import Control.Monad.Freer (Eff, type (~>), Member, subsume)
-import Control.Monad.Freer.Extras (raiseEnd2)
-import Control.Monad.Freer.TH (makeEffect)
-import           Wallet.Emulator.Wallet (Wallet)
-import Wallet.Effects (WalletEffect, SigningProcessEffect)
-import Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
-import Ledger.Value (Value)
-import Ledger.Tx (txId)
-import Ledger.TxId (TxId)
-import           Wallet.API                                      (payToPublicKey, defaultSlotRange)
+import           Control.Monad.Freer        (Eff, Member, subsume, type (~>))
+import           Control.Monad.Freer.Extras (raiseEnd2)
+import           Control.Monad.Freer.TH     (makeEffect)
+import           Ledger.Tx                  (txId)
+import           Ledger.TxId                (TxId)
+import           Ledger.Value               (Value)
+import           Wallet.API                 (defaultSlotRange, payToPublicKey)
+import           Wallet.Effects             (SigningProcessEffect, WalletEffect)
+import qualified Wallet.Emulator            as EM
+import           Wallet.Emulator.MultiAgent (MultiAgentEffect, walletAction)
+import           Wallet.Emulator.Wallet     (Wallet)
 
 data EmulatedWalletAPI r where
     LiftWallet :: Wallet -> Eff '[WalletEffect, SigningProcessEffect] a -> EmulatedWalletAPI a
@@ -39,7 +39,7 @@ payToWallet ::
     -> Value
     -> Eff effs TxId
 payToWallet source target amount =
-    liftWallet source $ fmap txId $ payToPublicKey defaultSlotRange amount (EM.walletPubKey target) 
+    liftWallet source $ fmap txId $ payToPublicKey defaultSlotRange amount (EM.walletPubKey target)
 
 -- | Handle the 'EmulatedWalletAPI' effect using the emulator's
 --   'MultiAgent' effect.

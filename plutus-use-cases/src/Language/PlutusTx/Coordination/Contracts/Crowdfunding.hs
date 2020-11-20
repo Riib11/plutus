@@ -54,8 +54,6 @@ import           GHC.Generics                      (Generic)
 import           IOTS                              (IotsType)
 
 import           Language.Plutus.Contract
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace, ContractHandle)
 import qualified Language.Plutus.Contract.Typed.Tx as Typed
 import qualified Language.PlutusTx                 as PlutusTx
 import           Language.PlutusTx.Prelude         hiding (Applicative (..), Semigroup (..), return, (<$>), (>>), (>>=))
@@ -70,10 +68,12 @@ import qualified Ledger.Typed.Scripts              as Scripts
 import           Ledger.Validation                 as V
 import           Ledger.Value                      (Value)
 import qualified Ledger.Value                      as Value
+import           Plutus.Trace.Emulator             (ContractHandle, EmulatorTrace)
+import qualified Plutus.Trace.Emulator             as Trace
 import           Prelude                           (Semigroup (..))
 import qualified Prelude                           as Haskell
-import           Schema                            (ToSchema, ToArgument)
-import           Wallet.Emulator                   (Wallet(..))
+import           Schema                            (ToArgument, ToSchema)
+import           Wallet.Emulator                   (Wallet (..))
 import qualified Wallet.Emulator                   as Emulator
 
 -- | A crowdfunding campaign.

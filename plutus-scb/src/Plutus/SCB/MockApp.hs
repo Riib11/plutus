@@ -60,7 +60,7 @@ import qualified Ledger
 import qualified Ledger.AddressMap                     as AM
 import           Plutus.SCB.Command                    ()
 import           Plutus.SCB.Core
-import Plutus.SCB.Core.ContractInstance (defaultMaxIterations)
+import           Plutus.SCB.Core.ContractInstance      (defaultMaxIterations)
 import           Plutus.SCB.Effects.ContractTest       (ContractTestMsg, TestContracts)
 import           Plutus.SCB.Effects.MultiAgent         (AgentState, MultiAgentSCBEffect, SCBMultiAgentMsg)
 import qualified Plutus.SCB.Effects.MultiAgent         as SCB.MultiAgent

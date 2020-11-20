@@ -40,31 +40,26 @@ module Language.PlutusTx.Coordination.Contracts.Game
     , lockTrace
     ) where
 
-import Control.Monad (void)
-import Data.Aeson (FromJSON, ToJSON)
-import GHC.Generics (Generic)
-import IOTS (IotsType)
-import Language.Plutus.Contract
-import Language.Plutus.Contract.Schema ()
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
-import qualified Language.PlutusTx as PlutusTx
-import Language.PlutusTx.Prelude
-import qualified Ledger.Constraints as Constraints
-import qualified Ledger.Typed.Scripts as Scripts
-import Ledger
-    ( Address
-    , ValidatorCtx
-    , Validator
-    , Value
-    )
-import Schema (ToSchema, ToArgument)
-import Wallet.Emulator (Wallet(..))
+import           Control.Monad                   (void)
+import           Data.Aeson                      (FromJSON, ToJSON)
+import           GHC.Generics                    (Generic)
+import           IOTS                            (IotsType)
+import           Language.Plutus.Contract
+import           Language.Plutus.Contract.Schema ()
+import qualified Language.PlutusTx               as PlutusTx
+import           Language.PlutusTx.Prelude
+import           Ledger                          (Address, Validator, ValidatorCtx, Value)
+import qualified Ledger.Constraints              as Constraints
+import qualified Ledger.Typed.Scripts            as Scripts
+import           Plutus.Trace.Emulator           (EmulatorTrace)
+import qualified Plutus.Trace.Emulator           as Trace
+import           Schema                          (ToArgument, ToSchema)
+import           Wallet.Emulator                 (Wallet (..))
 
-import qualified Ledger as Ledger
-import qualified Ledger.Ada as Ada
+import qualified Ledger                          as Ledger
+import qualified Ledger.Ada                      as Ada
 
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Char8           as C
 import qualified Prelude
 
 newtype HashedString = HashedString ByteString deriving newtype PlutusTx.IsData

@@ -6,16 +6,16 @@ module Spec.Game
     ( tests
     ) where
 
-import Control.Monad (void)
-import           Language.Plutus.Contract                      (ContractError, Contract)
+import           Control.Monad                                 (void)
+import           Language.Plutus.Contract                      (Contract, ContractError)
 import           Language.Plutus.Contract.Test
 import qualified Language.PlutusTx                             as PlutusTx
 import           Language.PlutusTx.Coordination.Contracts.Game
 import           Language.PlutusTx.Lattice
 import qualified Language.PlutusTx.Prelude                     as PlutusTx
 import           Ledger.Ada                                    (adaValueOf)
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (ContractInstanceTag)
+import           Plutus.Trace.Emulator                         (ContractInstanceTag)
+import qualified Plutus.Trace.Emulator                         as Trace
 import           Spec.Lib                                      (timesFeeAdjust)
 import qualified Spec.Lib                                      as Lib
 import           Test.Tasty

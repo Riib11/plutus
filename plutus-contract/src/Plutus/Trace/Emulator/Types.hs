@@ -1,19 +1,19 @@
+{-# LANGUAGE AllowAmbiguousTypes  #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DerivingStrategies   #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE ConstraintKinds     #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE TypeOperators       #-}
 
 module Plutus.Trace.Emulator.Types(
     EmulatorMessage(..)
@@ -55,23 +55,24 @@ import           Control.Monad.Freer.Reader         (Reader)
 import           Data.Aeson                         (FromJSON, ToJSON)
 import qualified Data.Aeson                         as JSON
 import           Data.Map                           (Map)
-import Data.String (IsString(..))
-import           Data.Text.Prettyprint.Doc (Pretty(..), (<+>), colon, braces, viaShow, fillSep, vsep, hang, parens)
 import qualified Data.Row.Internal                  as V
+import           Data.Sequence                      (Seq)
+import           Data.String                        (IsString (..))
+import           Data.Text                          (Text)
+import           Data.Text.Prettyprint.Doc          (Pretty (..), braces, colon, fillSep, hang, parens, viaShow, vsep,
+                                                     (<+>))
 import           GHC.Generics                       (Generic)
-import Data.Text (Text)
-import           Language.Plutus.Contract           (Contract(..))
-import qualified Language.Plutus.Contract.Types                as Contract.Types
-import           Language.Plutus.Contract.Resumable (Request (..), Response (..), Requests(..))
-import           Language.Plutus.Contract.Schema    (Input, Output, Event, Handlers)
-import Data.Sequence (Seq)
-import qualified Language.Plutus.Contract.Resumable            as State
+import           Language.Plutus.Contract           (Contract (..))
+import           Language.Plutus.Contract.Resumable (Request (..), Requests (..), Response (..))
+import qualified Language.Plutus.Contract.Resumable as State
+import           Language.Plutus.Contract.Schema    (Event, Handlers, Input, Output)
+import           Language.Plutus.Contract.Types     (ResumableResult (..))
+import qualified Language.Plutus.Contract.Types     as Contract.Types
 import           Ledger.Slot                        (Slot (..))
 import           Ledger.Tx                          (Tx)
 import           Plutus.Trace.Scheduler             (SystemCall, ThreadId)
 import           Wallet.Emulator.Wallet             (Wallet (..))
-import           Wallet.Types                       (ContractInstanceId, Notification(..), NotificationError)
-import           Language.Plutus.Contract.Types                (ResumableResult (..))
+import           Wallet.Types                       (ContractInstanceId, Notification (..), NotificationError)
 
 type ContractConstraints s =
     ( V.Forall (Output s) V.Unconstrained1
@@ -127,9 +128,9 @@ data EmulatorRuntimeError =
 
 instance Pretty EmulatorRuntimeError where
     pretty = \case
-        ThreadIdNotFound i -> "Thread ID not found:" <+> pretty i
+        ThreadIdNotFound i   -> "Thread ID not found:" <+> pretty i
         InstanceIdNotFound w -> "Instance ID not found:" <+> pretty w
-        JSONDecodingError e -> "JSON decoding error:" <+> pretty e
+        JSONDecodingError e  -> "JSON decoding error:" <+> pretty e
 
 -- | A user-defined tag for a contract instance. Used to find the instance's
 --   log messages in the emulator log.
@@ -138,7 +139,7 @@ newtype ContractInstanceTag = ContractInstanceTag { unContractInstanceTag :: Tex
     deriving anyclass (ToJSON, FromJSON)
     deriving newtype (IsString, Pretty)
 
--- | The 'ContractInstanceTag' for the contract instance of a wallet. See note 
+-- | The 'ContractInstanceTag' for the contract instance of a wallet. See note
 --   [Wallet contract instances]
 walletInstanceTag :: Wallet -> ContractInstanceTag
 walletInstanceTag (Wallet i) = fromString $ "Contract instance for wallet " <> show i
@@ -152,7 +153,7 @@ data UserThreadMsg =
 
 instance Pretty UserThreadMsg where
     pretty = \case
-        UserLog str -> pretty str
+        UserLog str     -> pretty str
         UserThreadErr e -> "Error:" <+> pretty e
 
 data ContractInstanceMsg =
@@ -191,7 +192,7 @@ instance Pretty ContractInstanceMsg where
             "Sending notification" <+> pretty notificationContractEndpoint <+> "to" <+> pretty notificationContractID
         NotificationSuccess Notification{notificationContractID,notificationContractEndpoint} ->
             "Notification" <+> pretty notificationContractEndpoint <+> "of" <+> pretty notificationContractID <+> "succeeded"
-        NotificationFailure e -> 
+        NotificationFailure e ->
             "Notification failed:" <+> viaShow e
         Freezing -> "Freezing contract instance"
         SendingContractState t -> "Sending contract state to" <+> pretty t

@@ -24,11 +24,11 @@ import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import           Control.Lens                                        hiding (ix)
 import qualified Control.Monad.Freer                                 as Free
+import           Control.Monad.Freer.Log                             (LogMessage, LogMsg)
+import qualified Control.Monad.Freer.Log                             as Free
 import qualified Control.Monad.Freer.State                           as Free
+import           Control.Monad.Freer.Writer                          (Writer)
 import qualified Control.Monad.Freer.Writer                          as Free
-import Control.Monad.Freer.Writer (Writer)
-import qualified Control.Monad.Freer.Log as Free
-import Control.Monad.Freer.Log (LogMessage, LogMsg)
 import           Control.Monad.Reader
 import           Control.Tracer
 

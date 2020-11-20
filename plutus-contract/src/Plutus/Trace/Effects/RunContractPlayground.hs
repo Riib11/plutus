@@ -1,5 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE DataKinds           #-}
@@ -10,6 +8,8 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
@@ -24,26 +24,26 @@ module Plutus.Trace.Effects.RunContractPlayground(
     , handleRunContractPlayground
     ) where
 
-import Control.Lens
-import Control.Monad (void)
-import Control.Monad.Freer (Eff, type (~>), Member, interpret, reinterpret)
-import Control.Monad.Freer.Reader (runReader)
-import Control.Monad.Freer.Error (Error, throwError)
-import Control.Monad.Freer.State (State, modify, gets)
-import           Control.Monad.Freer.Coroutine                   (Yield)
-import Control.Monad.Freer.TH (makeEffect)
-import           Control.Monad.Freer.Log                         (LogMsg (..), mapLog)
-import qualified Data.Aeson             as JSON
-import Data.Map (Map)
-import           Language.Plutus.Contract                      (Contract (..), HasBlockchainActions, ContractInstanceId)
-import Wallet.Emulator.Wallet (Wallet)
-import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError, contractThread, getThread)
-import           Plutus.Trace.Emulator.Types                     (ContractConstraints, ContractHandle (..),
-                                                                  EmulatorMessage (..), EmulatorThreads, EmulatorRuntimeError(..), walletInstanceTag)
-import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, nextId)
-import           Plutus.Trace.Scheduler                          (Priority (..), SysCall (..), SystemCall,
-                                                                  fork, mkSysCall)
-import Wallet.Emulator.MultiAgent (EmulatorEvent'(..), MultiAgentEffect)
+import           Control.Lens
+import           Control.Monad                           (void)
+import           Control.Monad.Freer                     (Eff, Member, interpret, reinterpret, type (~>))
+import           Control.Monad.Freer.Coroutine           (Yield)
+import           Control.Monad.Freer.Error               (Error, throwError)
+import           Control.Monad.Freer.Log                 (LogMsg (..), mapLog)
+import           Control.Monad.Freer.Reader              (runReader)
+import           Control.Monad.Freer.State               (State, gets, modify)
+import           Control.Monad.Freer.TH                  (makeEffect)
+import qualified Data.Aeson                              as JSON
+import           Data.Map                                (Map)
+import           Language.Plutus.Contract                (Contract (..), ContractInstanceId, HasBlockchainActions)
+import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
+import           Plutus.Trace.Emulator.ContractInstance  (EmulatorRuntimeError, contractThread, getThread)
+import           Plutus.Trace.Emulator.Types             (ContractConstraints, ContractHandle (..),
+                                                          EmulatorMessage (..), EmulatorRuntimeError (..),
+                                                          EmulatorThreads, walletInstanceTag)
+import           Plutus.Trace.Scheduler                  (Priority (..), SysCall (..), SystemCall, fork, mkSysCall)
+import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), MultiAgentEffect)
+import           Wallet.Emulator.Wallet                  (Wallet)
 
 {- Note [Wallet contract instances]
 
@@ -52,7 +52,7 @@ wallet runs exactly one instance of this contract. As a result,
 
 1. The 'RunContractPlayground' effect, which governs interactions with contract
    instances, only needs a 'Wallet' to identify the contract instance.
-2. We don't need an @ActivateContract@ action, we can just start all the 
+2. We don't need an @ActivateContract@ action, we can just start all the
    instances at the beginning of the simulation, using 'launchContract'
 
 -}
@@ -84,7 +84,7 @@ handleRunContractPlayground ::
     ~> Eff effs
 handleRunContractPlayground contract = \case
     CallEndpoint wallet ep vl -> handleCallEndpoint @effs @effs2 wallet ep vl
-    LaunchContract wllt -> handleLaunchContract @s @e @effs @effs2 contract wllt
+    LaunchContract wllt       -> handleLaunchContract @s @e @effs @effs2 contract wllt
 
 handleLaunchContract ::
     forall s e effs effs2.
@@ -134,7 +134,7 @@ getInstance ::
     => Wallet
     -> Eff effs ContractInstanceId
 getInstance wllt = do
-    r <- gets @(Map Wallet ContractInstanceId) (view (at wllt)) 
+    r <- gets @(Map Wallet ContractInstanceId) (view (at wllt))
     case r of
         Nothing -> throwError (InstanceIdNotFound wllt)
-        Just i -> pure i
+        Just i  -> pure i

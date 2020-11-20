@@ -2,20 +2,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Spec.Currency(tests) where
 
-import Control.Monad (void)
+import           Control.Monad                                     (void)
 import           Language.Plutus.Contract
 import           Language.Plutus.Contract.Test
 import qualified Ledger
 
 import           Language.PlutusTx.Coordination.Contracts.Currency (Currency)
 import qualified Language.PlutusTx.Coordination.Contracts.Currency as Cur
-import qualified Plutus.Trace.Emulator    as Trace
+import qualified Plutus.Trace.Emulator                             as Trace
 
 import           Test.Tasty
 
 tests :: TestTree
 tests = testGroup "currency"
-    [ checkPredicate 
+    [ checkPredicate
         "can create a new currency"
         (assertDone theContract (Trace.walletInstanceTag w1) (const True) "currency contract not done")
         (void $ Trace.activateContractWallet w1 (void theContract))

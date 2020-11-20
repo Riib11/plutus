@@ -17,13 +17,12 @@ module Wallet.Emulator.Chain where
 import           Codec.Serialise           (Serialise)
 import           Control.Lens              hiding (index)
 import           Control.Monad.Freer
-import           Control.Monad.Freer.Log   (LogMsg, logInfo, logDebug)
+import           Control.Monad.Freer.Log   (LogMsg, logDebug, logInfo)
 import           Control.Monad.Freer.State
 import qualified Control.Monad.State       as S
 import           Data.Aeson                (FromJSON, ToJSON)
 import           Data.Foldable             (traverse_)
-import           Data.List                 (partition)
-import           Data.List                 ((\\))
+import           Data.List                 (partition, (\\))
 import           Data.Maybe                (isNothing)
 import           Data.Text.Prettyprint.Doc
 import           Data.Traversable          (for)
@@ -102,11 +101,11 @@ handleControlChain = \case
 logEvent :: Member (LogMsg ChainEvent) effs => ChainEvent -> Eff effs ()
 logEvent e = case e of
     SlotAdd _ -> logDebug e
-    _ -> logInfo e
+    _         -> logInfo e
 
 handleChain :: (Members ChainEffs effs) => ChainEffect ~> Eff effs
 handleChain = \case
-    QueueTx tx -> modify $ over txPool (addTxToPool tx)
+    QueueTx tx     -> modify $ over txPool (addTxToPool tx)
     GetCurrentSlot -> gets _currentSlot
 
 -- | The result of validating a block.

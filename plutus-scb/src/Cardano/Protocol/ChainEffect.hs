@@ -1,13 +1,13 @@
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE GADTs         #-}
-{-# LANGUAGE LambdaCase    #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE TypeOperators    #-}
 
 module Cardano.Protocol.ChainEffect where
 
 import           Control.Monad.Freer
-import Control.Monad.Freer.Log
+import           Control.Monad.Freer.Log
 import           Control.Monad.Freer.Reader
 import           Control.Monad.Freer.State
 import           Control.Monad.Freer.Writer
@@ -15,8 +15,8 @@ import           Control.Monad.IO.Class
 
 import qualified Cardano.Protocol.Socket.Client as Client
 import qualified Cardano.Protocol.Socket.Server as Server
+import           Wallet.Emulator.Chain          (ChainEvent)
 import qualified Wallet.Emulator.Chain          as EC
-import Wallet.Emulator.Chain (ChainEvent)
 
 type ChainEffs = '[ State EC.ChainState
                   , LogMsg ChainEvent

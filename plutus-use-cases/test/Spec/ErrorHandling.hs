@@ -6,7 +6,7 @@ module Spec.ErrorHandling(tests) where
 import           Language.Plutus.Contract.Test
 
 import           Language.PlutusTx.Coordination.Contracts.ErrorHandling
-import qualified Plutus.Trace.Emulator    as Trace
+import qualified Plutus.Trace.Emulator                                  as Trace
 
 import           Test.Tasty
 

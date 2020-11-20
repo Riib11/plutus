@@ -13,7 +13,7 @@ import qualified Spec.Lib                                        as Lib
 
 import           Language.PlutusTx.Coordination.Contracts.Escrow
 import           Language.PlutusTx.Lattice
-import qualified Plutus.Trace.Emulator    as Trace
+import qualified Plutus.Trace.Emulator                           as Trace
 
 import           Test.Tasty
 import qualified Test.Tasty.HUnit                                as HUnit
@@ -90,7 +90,7 @@ tests = testGroup "escrow"
           .&&. assertDone con (Trace.walletInstanceTag w1) (const True) "refund should succeed")
         $ do
             hdl1 <- Trace.activateContractWallet w1 con
-            Trace.callEndpoint @"pay-escrow" hdl1 (Ada.lovelaceValueOf 20) 
+            Trace.callEndpoint @"pay-escrow" hdl1 (Ada.lovelaceValueOf 20)
             Trace.waitNSlots 100
             Trace.callEndpoint @"refund-escrow" hdl1 ()
             void $ Trace.waitNSlots 1

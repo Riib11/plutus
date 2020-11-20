@@ -7,11 +7,11 @@ module Cardano.Node.API
     , FollowerAPI
     ) where
 
-import Control.Monad.Freer.Log (LogMessage)
-import           Cardano.Node.Types    (FollowerID)
-import           Ledger                (Block, Slot, Tx)
-import           Servant.API           (Capture, Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
-import           Wallet.Emulator.Chain (ChainEvent)
+import           Cardano.Node.Types      (FollowerID)
+import           Control.Monad.Freer.Log (LogMessage)
+import           Ledger                  (Block, Slot, Tx)
+import           Servant.API             (Capture, Get, JSON, NoContent, Post, Put, ReqBody, (:<|>), (:>))
+import           Wallet.Emulator.Chain   (ChainEvent)
 
 type API
      = "healthcheck" :> Get '[ JSON] NoContent

@@ -22,8 +22,7 @@ import           Control.Monad
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Error
 import           Control.Monad.Freer.Extras
-import           Control.Monad.Freer.Log     (LogMessage, LogMsg, LogObserve,
-                                              handleObserveLog, mapLog)
+import           Control.Monad.Freer.Log     (LogMessage, LogMsg, LogObserve, handleObserveLog, mapLog)
 import           Control.Monad.Freer.State
 import           Data.Aeson                  (FromJSON, ToJSON)
 import           Data.Map                    (Map)
@@ -92,9 +91,9 @@ instance Pretty EmulatorEvent' where
         WalletEvent w e     -> pretty w <> colon <+> pretty e
         ChainIndexEvent w e -> pretty w <> colon <+> pretty e
         NotificationEvent e -> pretty e
-        SchedulerEvent e -> pretty e
-        InstanceEvent e -> pretty e
-        UserThreadEvent e -> pretty e
+        SchedulerEvent e    -> pretty e
+        InstanceEvent e     -> pretty e
+        UserThreadEvent e   -> pretty e
 
 type EmulatorEvent = EmulatorTimeEvent EmulatorEvent'
 

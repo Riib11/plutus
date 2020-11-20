@@ -1,10 +1,10 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE MonoLocalBinds     #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE TypeApplications   #-}
 {- This module provides a list of folds over the emulator event stream.
 -}
 module Wallet.Emulator.Folds (
@@ -39,38 +39,43 @@ module Wallet.Emulator.Folds (
     , postMapM
     ) where
 
-import Control.Foldl (FoldM(..), Fold(..))
-import Control.Lens hiding (Empty, Fold)
-import Control.Monad.Freer
-import Control.Monad ((>=>))
-import Data.Maybe (mapMaybe)
-import Data.Foldable (toList)
-import Data.Text (Text)
-import           Data.Text.Prettyprint.Doc (Pretty(..), vsep, layoutPretty, defaultLayoutOptions)
-import           Data.Text.Prettyprint.Doc.Render.Text           (renderStrict)
-import Control.Monad.Freer.Error
-import Ledger.Tx (Address, Tx, TxOutTx(..), TxOut(..))
-import Ledger.Index (ValidationError)
-import Language.Plutus.Contract (Contract)
-import qualified Control.Foldl as L
-import Ledger.Value (Value)
-import Ledger.Constraints.OffChain (UnbalancedTx)
-import Language.Plutus.Contract.Effects.WriteTx (pendingTransaction, HasWriteTx)
-import Plutus.Trace.Emulator.Types (ContractInstanceTag, cilMessage, cilTag, _HandledRequest, ContractConstraints, ContractInstanceLog, UserThreadMsg)
-import           Language.Plutus.Contract.Schema               (Event (..), Handlers)
-import Plutus.Trace.Emulator.ContractInstance (ContractInstanceState, addEventInstanceState, emptyInstanceState, instEvents, instContractState, instHandlersHistory)
-import qualified Data.Aeson as JSON
-import           Language.Plutus.Contract.Resumable (Response, Request)
-import Wallet.Emulator.Chain (_TxnValidationFail, _TxnValidate, ChainEvent(..))
-import qualified Language.Plutus.Contract.Resumable            as State
-import Language.Plutus.Contract.Types (ResumableResult(..))
-import qualified Ledger.AddressMap as AM
-import Ledger.AddressMap (UtxoMap)
-import Wallet.Emulator.MultiAgent (EmulatorEvent, instanceEvent, eteEvent, chainEvent, chainIndexEvent, EmulatorTimeEvent, userThreadEvent)
-import Wallet.Emulator.Wallet (Wallet, walletAddress)
-import Wallet.Emulator.ChainIndex (_AddressStartWatching)
-import Wallet.Rollup.Types (AnnotatedTx)
-import qualified Wallet.Rollup as Rollup
+import           Control.Foldl                            (Fold (..), FoldM (..))
+import qualified Control.Foldl                            as L
+import           Control.Lens                             hiding (Empty, Fold)
+import           Control.Monad                            ((>=>))
+import           Control.Monad.Freer
+import           Control.Monad.Freer.Error
+import qualified Data.Aeson                               as JSON
+import           Data.Foldable                            (toList)
+import           Data.Maybe                               (mapMaybe)
+import           Data.Text                                (Text)
+import           Data.Text.Prettyprint.Doc                (Pretty (..), defaultLayoutOptions, layoutPretty, vsep)
+import           Data.Text.Prettyprint.Doc.Render.Text    (renderStrict)
+import           Language.Plutus.Contract                 (Contract)
+import           Language.Plutus.Contract.Effects.WriteTx (HasWriteTx, pendingTransaction)
+import           Language.Plutus.Contract.Resumable       (Request, Response)
+import qualified Language.Plutus.Contract.Resumable       as State
+import           Language.Plutus.Contract.Schema          (Event (..), Handlers)
+import           Language.Plutus.Contract.Types           (ResumableResult (..))
+import           Ledger.AddressMap                        (UtxoMap)
+import qualified Ledger.AddressMap                        as AM
+import           Ledger.Constraints.OffChain              (UnbalancedTx)
+import           Ledger.Index                             (ValidationError)
+import           Ledger.Tx                                (Address, Tx, TxOut (..), TxOutTx (..))
+import           Ledger.Value                             (Value)
+import           Plutus.Trace.Emulator.ContractInstance   (ContractInstanceState, addEventInstanceState,
+                                                           emptyInstanceState, instContractState, instEvents,
+                                                           instHandlersHistory)
+import           Plutus.Trace.Emulator.Types              (ContractConstraints, ContractInstanceLog,
+                                                           ContractInstanceTag, UserThreadMsg, _HandledRequest,
+                                                           cilMessage, cilTag)
+import           Wallet.Emulator.Chain                    (ChainEvent (..), _TxnValidate, _TxnValidationFail)
+import           Wallet.Emulator.ChainIndex               (_AddressStartWatching)
+import           Wallet.Emulator.MultiAgent               (EmulatorEvent, EmulatorTimeEvent, chainEvent,
+                                                           chainIndexEvent, eteEvent, instanceEvent, userThreadEvent)
+import           Wallet.Emulator.Wallet                   (Wallet, walletAddress)
+import qualified Wallet.Rollup                            as Rollup
+import           Wallet.Rollup.Types                      (AnnotatedTx)
 
 type EmulatorEventFold a = Fold EmulatorEvent a
 
@@ -94,7 +99,7 @@ instanceState ::
     => Contract s e a
     -> ContractInstanceTag
     -> EmulatorEventFoldM effs (ContractInstanceState s e a)
-instanceState con tag = 
+instanceState con tag =
     let flt :: EmulatorEvent -> Maybe (Response JSON.Value)
         flt = preview (eteEvent . instanceEvent . filtered ((==) tag . view cilTag) . cilMessage . _HandledRequest)
         decode :: forall effs'. Member (Error EmulatorFoldErr) effs' => EmulatorEvent -> Eff effs' (Maybe (Response (Event s)))
@@ -102,7 +107,7 @@ instanceState con tag =
             case flt e of
                 Nothing -> pure Nothing
                 Just response -> case traverse (JSON.fromJSON @(Event s)) response of
-                    JSON.Error e' -> throwError $ JSONDecodingError e' response
+                    JSON.Error e'   -> throwError $ JSONDecodingError e' response
                     JSON.Success e' -> pure (Just e')
 
     in preMapMaybeM decode $ L.generalize $ Fold (flip $ addEventInstanceState con) (emptyInstanceState con) id
@@ -133,7 +138,7 @@ instanceTransactions con = fmap g . instanceState con where
     g = concat . fmap (mapMaybe (pendingTransaction @s . State.rqRequest)) . toList . instHandlersHistory
 
 -- | The reponses received by the contract instance
-instanceResponses :: 
+instanceResponses ::
     forall s e a effs.
     ( ContractConstraints s
     , Member (Error EmulatorFoldErr) effs
@@ -145,7 +150,7 @@ instanceResponses con = fmap (toList . instEvents) . instanceState con
 
 -- | The log messages produced by the contract instance.
 instanceLog :: ContractInstanceTag -> EmulatorEventFold [EmulatorTimeEvent ContractInstanceLog]
-instanceLog tag = 
+instanceLog tag =
     let flt :: EmulatorEvent -> Maybe (EmulatorTimeEvent ContractInstanceLog)
         flt = traverse (preview (instanceEvent . filtered ((==) tag . view cilTag)))
     in preMapMaybe flt L.list
@@ -170,7 +175,7 @@ fromResumableResult :: ResumableResult e i o a -> Outcome e a
 fromResumableResult = either Failed (maybe NotDone Done) . wcsFinalState
 
 -- | The final state of the instance
-instanceOutcome :: 
+instanceOutcome ::
     forall s e a effs.
     ( ContractConstraints s
     , Member (Error EmulatorFoldErr) effs
@@ -197,22 +202,22 @@ walletFunds = valueAtAddress . walletAddress
 
 -- | Whether the wallet is watching an address
 walletWatchingAddress :: Wallet -> Address -> EmulatorEventFold Bool
-walletWatchingAddress wllt addr = 
+walletWatchingAddress wllt addr =
     preMapMaybe (preview (eteEvent . chainIndexEvent wllt . _AddressStartWatching))
     $ L.any ((==) addr)
 
 -- | Annotate the transactions that were validated by the node
 annotatedBlockchain :: EmulatorEventFold [[AnnotatedTx]]
-annotatedBlockchain = 
+annotatedBlockchain =
     preMapMaybe (preview (eteEvent . chainEvent))
     $ Fold Rollup.handleChainEvent Rollup.initialState Rollup.getAnnotatedTransactions
 
 -- | All transactions that happened during the simulation
 blockchain :: EmulatorEventFold [[Tx]]
-blockchain = 
+blockchain =
     let step (currentBlock, otherBlocks) = \case
-            SlotAdd _ -> ([], reverse currentBlock : otherBlocks)
-            TxnValidate txn -> (txn : currentBlock, otherBlocks)
+            SlotAdd _             -> ([], reverse currentBlock : otherBlocks)
+            TxnValidate txn       -> (txn : currentBlock, otherBlocks)
             TxnValidationFail _ _ -> (currentBlock, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
@@ -226,7 +231,7 @@ emulatorLog = L.list
 
 -- | Pretty-print each element into a new line.
 renderLines :: forall a. Pretty a => Fold a Text
-renderLines = 
+renderLines =
     let rnd = renderStrict . layoutPretty defaultLayoutOptions in
     dimap pretty (rnd . vsep) L.list
 
@@ -248,7 +253,7 @@ preMapMaybe :: (a -> Maybe b) -> Fold b r -> Fold a r
 preMapMaybe f (Fold step begin done) = Fold step' begin done where
     step' x a = case f a of
         Nothing -> x
-        Just b -> step x b
+        Just b  -> step x b
 
 -- | Effectfully map the result of a 'FoldM'
 postMapM ::

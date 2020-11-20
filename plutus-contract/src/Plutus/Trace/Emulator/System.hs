@@ -1,9 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MonoLocalBinds      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
@@ -18,10 +18,9 @@ import           Data.Foldable                 (traverse_)
 import           Wallet.Emulator.Chain         (ChainControlEffect, ChainEffect, getCurrentSlot, processBlock)
 import           Wallet.Emulator.MultiAgent    (MultiAgentEffect, walletControlAction)
 
-import Data.String (IsString(..))
+import           Data.String                   (IsString (..))
 import           Plutus.Trace.Emulator.Types   (EmulatorMessage (..))
-import           Plutus.Trace.Scheduler        (Priority (..), SysCall (..), SystemCall, Tag, fork,
-                                                mkSysCall, sleep)
+import           Plutus.Trace.Scheduler        (Priority (..), SysCall (..), SystemCall, Tag, fork, mkSysCall, sleep)
 import           Wallet.Emulator.ChainIndex    (chainIndexNotify)
 import           Wallet.Emulator.NodeClient    (ChainClientNotification (..), clientNotify)
 import           Wallet.Emulator.Wallet        (Wallet (..))
@@ -74,8 +73,8 @@ agentThread wllt = go where
         e <- sleep @effs @EmulatorMessage Sleeping
         let noti = e >>= \case
                 BlockAdded block -> Just $ BlockValidated block
-                NewSlot slot -> Just $ SlotChanged slot
-                _ -> Nothing
+                NewSlot slot     -> Just $ SlotChanged slot
+                _                -> Nothing
 
         forM_ noti $ \n -> do
             walletControlAction wllt $ do

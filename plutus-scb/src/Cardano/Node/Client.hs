@@ -9,13 +9,13 @@
 module Cardano.Node.Client where
 
 import           Cardano.Node.API          (API)
-import Control.Monad.Freer.Log (LogMessage)
 import           Cardano.Node.Follower     (NodeFollowerEffect (..))
 import           Cardano.Node.RandomTx     (GenRandomTx (..))
 import           Cardano.Node.Types        (FollowerID)
 import           Control.Monad             (void)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Error
+import           Control.Monad.Freer.Log   (LogMessage)
 import           Control.Monad.IO.Class
 import           Data.Proxy                (Proxy (Proxy))
 import           Ledger                    (Block, Slot, Tx)

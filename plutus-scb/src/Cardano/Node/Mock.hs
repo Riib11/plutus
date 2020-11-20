@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
@@ -6,17 +5,18 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
 module Cardano.Node.Mock where
 
 import           Control.Concurrent              (threadDelay)
 import           Control.Concurrent.MVar         (MVar, modifyMVar_, putMVar, takeMVar)
-import           Control.Lens                    (over, set, view, unto)
+import           Control.Lens                    (over, set, unto, view)
 import           Control.Monad                   (forever, unless, void)
-import           Control.Monad.Freer             (Eff, Member, interpret, runM, reinterpret)
+import           Control.Monad.Freer             (Eff, Member, interpret, reinterpret, runM)
 import           Control.Monad.Freer.Extras      (handleZoomedState)
-import           Control.Monad.Freer.Log         (mapLog, renderLogMessages, LogMessage, handleLogWriter)
+import           Control.Monad.Freer.Log         (LogMessage, handleLogWriter, mapLog, renderLogMessages)
 import           Control.Monad.Freer.Reader      (Reader)
 import qualified Control.Monad.Freer.Reader      as Eff
 import           Control.Monad.Freer.State       (State)

@@ -1,7 +1,7 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MonoLocalBinds      #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -13,13 +13,10 @@ module Playground.Interpreter.Util
     , renderInstanceTrace
     ) where
 
-import Control.Monad.Freer (run)
-import qualified Control.Foldl as L
+import qualified Control.Foldl                                   as L
+import           Control.Monad                                   (void)
+import           Control.Monad.Freer                             (run)
 import           Control.Monad.Freer.Error                       (Error, runError)
-import Control.Monad (void)
-import           Data.Text.Prettyprint.Doc (layoutPretty, defaultLayoutOptions, vsep, pretty)
-import           Data.Text.Prettyprint.Doc.Render.Text           (renderStrict)
-import Streaming.Prelude (fst')
 import           Data.Aeson                                      (FromJSON, eitherDecode)
 import           Data.Bifunctor                                  (first)
 import           Data.ByteString.Lazy                            (ByteString)
@@ -28,27 +25,28 @@ import           Data.Foldable                                   (traverse_)
 import           Data.Map                                        (Map)
 import qualified Data.Map                                        as Map
 import           Data.Text                                       (Text)
-import           Language.Plutus.Contract                        (Contract,
-                                                                  HasBlockchainActions)
-import           Language.Plutus.Contract.Effects.ExposeEndpoint (EndpointDescription(getEndpointDescription))
-import Ledger.Crypto (pubKeyHash)
+import           Data.Text.Prettyprint.Doc                       (defaultLayoutOptions, layoutPretty, pretty, vsep)
+import           Data.Text.Prettyprint.Doc.Render.Text           (renderStrict)
+import           Language.Plutus.Contract                        (Contract, HasBlockchainActions)
+import           Language.Plutus.Contract.Effects.ExposeEndpoint (EndpointDescription (getEndpointDescription))
+import           Ledger.Crypto                                   (pubKeyHash)
 import           Ledger.Value                                    (Value)
 import           Playground.Types                                (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet),
-                                                                  EvaluationResult(..), Expression,
+                                                                  EvaluationResult (..), Expression,
                                                                   FunctionSchema (FunctionSchema),
                                                                   PlaygroundError (JsonDecodingError, OtherError),
                                                                   SimulatorWallet (SimulatorWallet), amount, argument,
                                                                   argumentValues, caller, decodingError,
-                                                                  endpointDescription,
-                                                                  expected, input, recipient,
-                                                                  sender,
-                                                                  simulatorWalletWallet)
-import Plutus.Trace (ContractConstraints, ContractInstanceTag)
-import Plutus.Trace.Playground (PlaygroundTrace, runPlaygroundStream, EmulatorConfig(..), walletInstanceTag)
-import qualified Plutus.Trace.Playground as Trace
-import Wallet.Emulator.Folds (EmulatorEventFoldM)
-import qualified Wallet.Emulator.Folds as Folds
-import Wallet.Emulator.Stream (foldEmulatorStreamM, takeUntilSlot)
+                                                                  endpointDescription, expected, input, recipient,
+                                                                  sender, simulatorWalletWallet)
+import           Plutus.Trace                                    (ContractConstraints, ContractInstanceTag)
+import           Plutus.Trace.Playground                         (EmulatorConfig (..), PlaygroundTrace,
+                                                                  runPlaygroundStream, walletInstanceTag)
+import qualified Plutus.Trace.Playground                         as Trace
+import           Streaming.Prelude                               (fst')
+import           Wallet.Emulator.Folds                           (EmulatorEventFoldM)
+import qualified Wallet.Emulator.Folds                           as Folds
+import           Wallet.Emulator.Stream                          (foldEmulatorStreamM, takeUntilSlot)
 import           Wallet.Emulator.Types                           (Wallet, walletPubKey)
 
 -- | Unfortunately any uncaught errors in the interpreter kill the
@@ -71,7 +69,7 @@ funds :: [Wallet] -> EmulatorEventFoldM effs (Map Wallet Value)
 funds = L.generalize . sequenceA . Map.fromList . fmap (\w -> (w, Folds.walletFunds w))
 
 renderInstanceTrace :: [ContractInstanceTag] -> EmulatorEventFoldM effs Text
-renderInstanceTrace = 
+renderInstanceTrace =
     L.generalize
     . fmap (renderStrict . layoutPretty defaultLayoutOptions . vsep . fmap pretty)
     . sequenceA
@@ -111,7 +109,7 @@ stage contract programJson simulatorWalletsJson = do
             $ foldEmulatorStreamM @'[Error PlaygroundError] (evaluationResultFold allWallets)
             $ takeUntilSlot 20 -- FIXME: Max slot
             $ runPlaygroundStream config (void contract) (traverse_ expressionToTrace simulation)
-    
+
     case final of
         Left err     -> Left . OtherError . show $ err
         Right result -> Right (fst' result)

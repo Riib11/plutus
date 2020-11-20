@@ -1,11 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeOperators       #-}
 module Plutus.Trace.Effects.EmulatorControl(
     EmulatorControl(..)
     , setSigningProcess
@@ -16,23 +16,24 @@ module Plutus.Trace.Effects.EmulatorControl(
     , handleEmulatorControl
     ) where
 
-import Control.Lens (view, at)
-import Control.Monad (void)
-import Control.Monad.Freer (type (~>), Eff, Member)
-import Control.Monad.Freer.State (State, gets)
-import Data.Maybe (fromMaybe)
-import Control.Monad.Freer.Error (Error)
-import Control.Monad.Freer.TH (makeEffect)
-import Control.Monad.Freer.Coroutine (Yield)
-import Wallet.Emulator.Wallet (Wallet, SigningProcess, WalletState)
-import Wallet.Types (ContractInstanceId)
-import Wallet.Emulator.Chain (ChainState)
-import Plutus.Trace.Scheduler (SystemCall, mkSysCall, Priority(Normal), SysCall(Message, Thaw))
-import Plutus.Trace.Emulator.Types (EmulatorMessage(Freeze), EmulatorThreads)
-import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError, getThread)
-import qualified Wallet.Emulator.Wallet                          as W
-import qualified Wallet.Emulator                                 as EM
-import           Wallet.Emulator.MultiAgent (walletControlAction, MultiAgentEffect, EmulatorState)
+import           Control.Lens                           (at, view)
+import           Control.Monad                          (void)
+import           Control.Monad.Freer                    (Eff, Member, type (~>))
+import           Control.Monad.Freer.Coroutine          (Yield)
+import           Control.Monad.Freer.Error              (Error)
+import           Control.Monad.Freer.State              (State, gets)
+import           Control.Monad.Freer.TH                 (makeEffect)
+import           Data.Maybe                             (fromMaybe)
+import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError, getThread)
+import           Plutus.Trace.Emulator.Types            (EmulatorMessage (Freeze), EmulatorThreads)
+import           Plutus.Trace.Scheduler                 (Priority (Normal), SysCall (Message, Thaw), SystemCall,
+                                                         mkSysCall)
+import qualified Wallet.Emulator                        as EM
+import           Wallet.Emulator.Chain                  (ChainState)
+import           Wallet.Emulator.MultiAgent             (EmulatorState, MultiAgentEffect, walletControlAction)
+import           Wallet.Emulator.Wallet                 (SigningProcess, Wallet, WalletState)
+import qualified Wallet.Emulator.Wallet                 as W
+import           Wallet.Types                           (ContractInstanceId)
 
 data EmulatorControl r where
     SetSigningProcess :: Wallet -> SigningProcess -> EmulatorControl ()

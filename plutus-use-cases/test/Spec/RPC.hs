@@ -3,14 +3,14 @@
 {-# LANGUAGE TypeApplications #-}
 module Spec.RPC(tests) where
 
-import Control.Monad (void)
+import           Control.Monad                                (void)
 import           Data.Either                                  (isRight)
 import           Language.Plutus.Contract
 import           Language.Plutus.Contract.Test
 import           Language.PlutusTx.Lattice
+import           Plutus.Trace.Emulator                        (EmulatorTrace)
+import qualified Plutus.Trace.Emulator                        as Trace
 import           Wallet.Emulator.Notify                       (walletInstanceId)
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
 
 import           Language.PlutusTx.Coordination.Contracts.RPC
 
@@ -38,7 +38,7 @@ tests = testGroup "RPC"
         (assertDone cancelContract (Trace.walletInstanceTag server) isRight ""
         .&&. assertDone cancelContract (Trace.walletInstanceTag client) (\case { Left (Left CancelRPC) -> True; _ -> False}) "")
         $ do
-            (shdl, chdl) <- 
+            (shdl, chdl) <-
                 (,) <$> Trace.activateContractWallet server (void cancelContract)
                     <*> Trace.activateContractWallet client (void cancelContract)
             Trace.callEndpoint @"serve" shdl ()

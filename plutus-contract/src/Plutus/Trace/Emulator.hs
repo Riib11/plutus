@@ -1,10 +1,10 @@
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
@@ -53,40 +53,40 @@ module Plutus.Trace.Emulator(
     ) where
 
 import           Control.Lens
-import           Control.Monad                                   (void)
-import Control.Monad.Freer.Reader (Reader)
+import           Control.Monad                           (void)
 import           Control.Monad.Freer
-import           Control.Monad.Freer.Coroutine                   (Yield)
-import           Control.Monad.Freer.Error                       (Error)
-import           Control.Monad.Freer.Extras                      (raiseEnd5)
-import           Control.Monad.Freer.Log                         (LogMessage (..), LogMsg (..),
-                                                                  mapLog)
-import           Control.Monad.Freer.State                       (State, evalState)
-import qualified Data.Map                                        as Map
-import           Plutus.Trace.Scheduler                          (SystemCall, runThreads, ThreadId)
-import           Wallet.Emulator.Chain                           (ChainControlEffect, ChainEffect)
-import qualified Wallet.Emulator.Chain                           as ChainState
-import           Wallet.Emulator.MultiAgent                      (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
-                                                                  MultiAgentEffect,
-                                                                  schedulerEvent)
-import qualified Wallet.Emulator.Wallet                          as Wallet
-import Wallet.Emulator.Stream (runTraceStream, EmulatorConfig(..), EmulatorErr(..), initialDistribution, defaultEmulatorConfig)
+import           Control.Monad.Freer.Coroutine           (Yield)
+import           Control.Monad.Freer.Error               (Error)
+import           Control.Monad.Freer.Extras              (raiseEnd5)
+import           Control.Monad.Freer.Log                 (LogMessage (..), LogMsg (..), mapLog)
+import           Control.Monad.Freer.Reader              (Reader)
+import           Control.Monad.Freer.State               (State, evalState)
+import qualified Data.Map                                as Map
+import           Plutus.Trace.Scheduler                  (SystemCall, ThreadId, runThreads)
+import           Wallet.Emulator.Chain                   (ChainControlEffect, ChainEffect)
+import qualified Wallet.Emulator.Chain                   as ChainState
+import           Wallet.Emulator.MultiAgent              (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
+                                                          MultiAgentEffect, schedulerEvent)
+import           Wallet.Emulator.Stream                  (EmulatorConfig (..), EmulatorErr (..), defaultEmulatorConfig,
+                                                          initialDistribution, runTraceStream)
+import qualified Wallet.Emulator.Wallet                  as Wallet
 
-import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, handleDeterministicIds)
-import Plutus.Trace.Effects.EmulatedWalletAPI (EmulatedWalletAPI, handleEmulatedWalletAPI)
-import qualified Plutus.Trace.Effects.EmulatedWalletAPI as EmulatedWalletAPI
-import Plutus.Trace.Effects.EmulatorControl (EmulatorControl, handleEmulatorControl)
-import qualified Plutus.Trace.Effects.EmulatorControl as EmulatorControl
-import Plutus.Trace.Effects.RunContract (RunContract, handleRunContract)
-import qualified Plutus.Trace.Effects.RunContract as RunContract
-import Plutus.Trace.Effects.Waiting (Waiting, handleWaiting)
-import qualified Plutus.Trace.Effects.Waiting as Waiting
-import           Plutus.Trace.Emulator.ContractInstance          (EmulatorRuntimeError)
-import           Plutus.Trace.Emulator.System                    (launchSystemThreads)
-import           Plutus.Trace.Emulator.Types                     (ContractConstraints, ContractHandle (..), Emulator,
-                                                                  EmulatorMessage (..), EmulatorThreads, ContractInstanceTag, UserThreadMsg(..))
-import Streaming (Stream)
-import Streaming.Prelude (Of)
+import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
+import           Plutus.Trace.Effects.EmulatedWalletAPI  (EmulatedWalletAPI, handleEmulatedWalletAPI)
+import qualified Plutus.Trace.Effects.EmulatedWalletAPI  as EmulatedWalletAPI
+import           Plutus.Trace.Effects.EmulatorControl    (EmulatorControl, handleEmulatorControl)
+import qualified Plutus.Trace.Effects.EmulatorControl    as EmulatorControl
+import           Plutus.Trace.Effects.RunContract        (RunContract, handleRunContract)
+import qualified Plutus.Trace.Effects.RunContract        as RunContract
+import           Plutus.Trace.Effects.Waiting            (Waiting, handleWaiting)
+import qualified Plutus.Trace.Effects.Waiting            as Waiting
+import           Plutus.Trace.Emulator.ContractInstance  (EmulatorRuntimeError)
+import           Plutus.Trace.Emulator.System            (launchSystemThreads)
+import           Plutus.Trace.Emulator.Types             (ContractConstraints, ContractHandle (..), ContractInstanceTag,
+                                                          Emulator, EmulatorMessage (..), EmulatorThreads,
+                                                          UserThreadMsg (..))
+import           Streaming                               (Stream)
+import           Streaming.Prelude                       (Of)
 
 type EmulatorTrace a =
         Eff

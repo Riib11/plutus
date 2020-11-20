@@ -13,7 +13,7 @@ import           Ledger.Constraints                              (ScriptLookups 
 import qualified Ledger.Constraints                              as Constraints
 import           Ledger.Scripts                                  (unitRedeemer)
 import           Ledger.Typed.Scripts                            as Scripts
-import qualified Plutus.Trace.Emulator    as Trace
+import qualified Plutus.Trace.Emulator                           as Trace
 
 import           Language.PlutusTx.Coordination.Contracts.PubKey (PubKeyError, pubKeyContract)
 

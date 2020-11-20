@@ -1,4 +1,3 @@
-{-# LANGUAGE NumericUnderscores     #-}
 {-# LANGUAGE AllowAmbiguousTypes    #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE DeriveAnyClass         #-}
@@ -11,6 +10,7 @@
 {-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE MonoLocalBinds         #-}
 {-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE NumericUnderscores     #-}
 {-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE TemplateHaskell        #-}
@@ -45,8 +45,7 @@ module Language.Plutus.Contract.Trace
     ) where
 
 import           Control.Arrow                                     ((>>>), (>>^))
-import           Control.Lens                                      (from, makeClassyPrisms, review,
-                                                                    view)
+import           Control.Lens                                      (from, makeClassyPrisms, review, view)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Log                           (LogMessage, LogMsg, LogObserve)
 import           Control.Monad.Freer.Reader                        (Reader)
@@ -58,8 +57,8 @@ import           Data.Text.Prettyprint.Doc                         (Pretty, pret
 import           GHC.Generics                                      (Generic)
 
 import           Data.Text                                         (Text)
-import           Language.Plutus.Contract                          (HasAwaitSlot, HasTxConfirmation,
-                                                                    HasUtxoAt, HasWatchAddress, HasWriteTx)
+import           Language.Plutus.Contract                          (HasAwaitSlot, HasTxConfirmation, HasUtxoAt,
+                                                                    HasWatchAddress, HasWriteTx)
 import           Language.Plutus.Contract.Schema                   (Event (..), Handlers (..))
 
 import qualified Language.Plutus.Contract.Effects.AwaitSlot        as AwaitSlot

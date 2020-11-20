@@ -11,12 +11,12 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 module Spec.Future(tests, theFuture, accounts) where
 
-import Control.Monad (void)
-import Control.Monad.Freer (run)
-import Control.Monad.Freer.Error (runError)
-import Wallet.Emulator.Stream (foldEmulatorStreamM, takeUntilSlot)
+import           Control.Monad                                   (void)
+import           Control.Monad.Freer                             (run)
+import           Control.Monad.Freer.Error                       (runError)
 import           Test.Tasty
 import qualified Test.Tasty.HUnit                                as HUnit
+import           Wallet.Emulator.Stream                          (foldEmulatorStreamM, takeUntilSlot)
 
 import qualified Spec.Lib                                        as Lib
 import           Spec.TokenAccount                               (assertAccountBalance)
@@ -35,10 +35,10 @@ import           Language.PlutusTx.Coordination.Contracts.Future (Future (..), F
                                                                   FutureSchema, FutureSetup (..), Role (..))
 import qualified Language.PlutusTx.Coordination.Contracts.Future as F
 import           Language.PlutusTx.Lattice
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace, ContractHandle)
-import qualified Wallet.Emulator.Folds as Folds
-import qualified Streaming.Prelude as S
+import           Plutus.Trace.Emulator                           (ContractHandle, EmulatorTrace)
+import qualified Plutus.Trace.Emulator                           as Trace
+import qualified Streaming.Prelude                               as S
+import qualified Wallet.Emulator.Folds                           as Folds
 
 tests :: TestTree
 tests =

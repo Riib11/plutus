@@ -43,8 +43,8 @@ import           Ledger.Scripts                        (Datum (getDatum), Script
                                                         ValidatorHash (ValidatorHash), unValidatorScript)
 import           Ledger.Value                          (CurrencySymbol (CurrencySymbol), TokenName (TokenName))
 import qualified Ledger.Value                          as Value
+import           Wallet.Emulator.Folds                 (EmulatorEventFold)
 import qualified Wallet.Emulator.Folds                 as Folds
-import Wallet.Emulator.Folds (EmulatorEventFold)
 import           Wallet.Emulator.Types                 (Wallet (Wallet))
 import           Wallet.Rollup                         (doAnnotateBlockchain)
 import           Wallet.Rollup.Types                   (AnnotatedTx (AnnotatedTx),
@@ -55,7 +55,7 @@ import           Wallet.Rollup.Types                   (AnnotatedTx (AnnotatedTx
 
 showBlockchainFold :: [(PubKeyHash, Wallet)] -> EmulatorEventFold (Either Text Text)
 showBlockchainFold walletKeys =
-    let r txns = 
+    let r txns =
             (renderStrict . layoutPretty defaultLayoutOptions)
             <$> runReaderT (render txns) (Map.fromList walletKeys)
     in fmap r Folds.annotatedBlockchain

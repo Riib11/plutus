@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds     #-}
 {-# LANGUAGE DataKinds           #-}
@@ -9,6 +8,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
@@ -26,29 +26,33 @@ module Plutus.Trace.Effects.RunContract(
     , handleRunContract
     ) where
 
-import Control.Monad.Freer (Eff, type (~>), Member, interpret, reinterpret)
-import Control.Monad.Freer.TH (makeEffect)
-import Control.Monad.Freer.Log (LogMsg, mapLog, logError)
-import Control.Monad (void)
-import Control.Monad.Freer.Error (Error, throwError)
-import Control.Monad.Freer.State (State)
-import Control.Monad.Freer.Reader (runReader, ask, Reader)
+import           Control.Monad                                   (void)
+import           Control.Monad.Freer                             (Eff, Member, interpret, reinterpret, type (~>))
 import           Control.Monad.Freer.Coroutine                   (Yield)
+import           Control.Monad.Freer.Error                       (Error, throwError)
+import           Control.Monad.Freer.Log                         (LogMsg, logError, mapLog)
+import           Control.Monad.Freer.Reader                      (Reader, ask, runReader)
+import           Control.Monad.Freer.State                       (State)
+import           Control.Monad.Freer.TH                          (makeEffect)
 
-import Data.String (IsString(..))
-import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, nextId)
-import           Data.Proxy                         (Proxy (..))
-import           Language.Plutus.Contract           (Contract, HasBlockchainActions, HasEndpoint)
-import qualified Data.Row.Internal                  as V
-import           Language.Plutus.Contract.Schema    (Input, Output)
-import qualified Data.Aeson                         as JSON
+import qualified Data.Aeson                                      as JSON
+import           Data.Proxy                                      (Proxy (..))
+import qualified Data.Row.Internal                               as V
+import           Data.String                                     (IsString (..))
+import           Language.Plutus.Contract                        (Contract, HasBlockchainActions, HasEndpoint)
 import qualified Language.Plutus.Contract.Effects.ExposeEndpoint as Endpoint
-import Wallet.Emulator.Wallet (Wallet(..))
-import           Plutus.Trace.Emulator.Types (EmulatorThreads, EmulatorMessage(EndpointCall), ContractInstanceState(..),EmulatorRuntimeError(JSONDecodingError), UserThreadMsg(UserThreadErr))
+import           Language.Plutus.Contract.Schema                 (Input, Output)
+import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, nextId)
 import           Plutus.Trace.Emulator.ContractInstance          (contractThread, getThread)
-import           Plutus.Trace.Scheduler (SystemCall, fork, Tag, Priority(..), mkSysCall, SysCall(Message), ThreadId, sleep)
-import           Wallet.Emulator.MultiAgent (MultiAgentEffect, EmulatorEvent'(..))
-import Plutus.Trace.Emulator.Types (ContractHandle(..), ContractInstanceTag, EmulatorMessage(ContractInstanceStateRequest, ContractInstanceStateResponse))
+import           Plutus.Trace.Emulator.Types                     (ContractHandle (..), ContractInstanceState (..),
+                                                                  ContractInstanceTag,
+                                                                  EmulatorMessage (ContractInstanceStateRequest, ContractInstanceStateResponse, EndpointCall),
+                                                                  EmulatorRuntimeError (JSONDecodingError),
+                                                                  EmulatorThreads, UserThreadMsg (UserThreadErr))
+import           Plutus.Trace.Scheduler                          (Priority (..), SysCall (Message), SystemCall, Tag,
+                                                                  ThreadId, fork, mkSysCall, sleep)
+import           Wallet.Emulator.MultiAgent                      (EmulatorEvent' (..), MultiAgentEffect)
+import           Wallet.Emulator.Wallet                          (Wallet (..))
 
 type ContractConstraints s =
     ( V.Forall (Output s) V.Unconstrained1
@@ -61,7 +65,7 @@ type ContractConstraints s =
     , V.Forall (Output s) JSON.ToJSON
     )
 
--- | The 'ContractInstanceTag' for the contract instance of a wallet. See note 
+-- | The 'ContractInstanceTag' for the contract instance of a wallet. See note
 --   [Wallet contract instances]
 walletInstanceTag :: Wallet -> ContractInstanceTag
 walletInstanceTag (Wallet i) = fromString $ "Contract instance for wallet " <> show i
@@ -102,7 +106,7 @@ handleRunContract :: forall effs effs2.
 handleRunContract = \case
     ActivateContract w c t -> handleActivate @_ @_ @effs @effs2 w t (void c)
     CallEndpointP p h v -> handleCallEndpoint @_ @_ @_ @_ @effs @effs2 p h v
-    GetContractState hdl -> 
+    GetContractState hdl ->
         interpret (mapLog UserThreadEvent)
             $ handleGetContractState @_ @_ @(LogMsg UserThreadMsg ': effs) @effs2 hdl
 

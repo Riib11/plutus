@@ -33,7 +33,7 @@ import           Servant.Client                  (BaseUrl (baseUrlPort))
 import qualified Wallet.API                      as WAPI
 import           Wallet.Effects                  (SigningProcessEffect)
 import qualified Wallet.Effects                  as WE
-import           Wallet.Emulator.Wallet          (Wallet, SigningProcess, defaultSigningProcess, handleSigningProcess)
+import           Wallet.Emulator.Wallet          (SigningProcess, Wallet, defaultSigningProcess, handleSigningProcess)
 
 import           Cardano.SigningProcess.API      (API)
 import           Plutus.SCB.Utils                (tshow)

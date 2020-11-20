@@ -1,5 +1,7 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE NamedFieldPuns       #-}
@@ -10,8 +12,6 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS -fplugin-opt Language.PlutusTx.Plugin:debug-context #-}
 -- | A general-purpose escrow contract in Plutus
 module Language.PlutusTx.Coordination.Contracts.Escrow(
@@ -43,8 +43,8 @@ module Language.PlutusTx.Coordination.Contracts.Escrow(
 import           Control.Lens                      (makeClassyPrisms, review)
 import           Control.Monad                     (void)
 import           Control.Monad.Error.Lens          (throwing)
-import GHC.Generics (Generic)
-import Data.Aeson (ToJSON, FromJSON)
+import           Data.Aeson                        (FromJSON, ToJSON)
+import           GHC.Generics                      (Generic)
 
 import           Ledger                            (Datum (..), DatumHash, PubKeyHash, Slot, TxId, TxOutTx (..),
                                                     ValidatorHash, interval, scriptOutputsAt, txId, txSignedBy,

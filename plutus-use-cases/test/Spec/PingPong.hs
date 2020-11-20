@@ -2,8 +2,8 @@
 {-# LANGUAGE TypeApplications #-}
 module Spec.PingPong(tests) where
 
-import Control.Monad (void)
-import           Data.Maybe                                        (isNothing, isJust)
+import           Control.Monad                                     (void)
+import           Data.Maybe                                        (isJust, isNothing)
 import           Language.Plutus.Contract
 import           Language.Plutus.Contract.Test
 import           Language.PlutusTx.Lattice
@@ -11,8 +11,8 @@ import           Language.PlutusTx.Lattice
 import           Language.Plutus.Contract.StateMachine             (OnChainState)
 import           Language.PlutusTx.Coordination.Contracts.PingPong (Input, PingPongError, PingPongSchema, PingPongState)
 import qualified Language.PlutusTx.Coordination.Contracts.PingPong as PingPong
-import qualified Plutus.Trace.Emulator    as Trace
-import Plutus.Trace.Emulator (EmulatorTrace)
+import           Plutus.Trace.Emulator                             (EmulatorTrace)
+import qualified Plutus.Trace.Emulator                             as Trace
 
 import           Test.Tasty
 

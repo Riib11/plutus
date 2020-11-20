@@ -90,8 +90,8 @@ makeLenses 'Rollup
 
 data RollupState =
     RollupState
-        { _currentSequenceId :: SequenceId
-        , _rollup      :: Rollup
+        { _currentSequenceId     :: SequenceId
+        , _rollup                :: Rollup
         , _annotatedTransactions :: [AnnotatedTx] -- reverse order
         }
 

@@ -10,13 +10,13 @@ module Wallet.Emulator.LogMessages(
   ) where
 
 import           Data.Aeson                  (FromJSON, ToJSON)
-import           Data.Text.Prettyprint.Doc   (Pretty (..), (<+>), viaShow, hang, vsep)
+import           Data.Text.Prettyprint.Doc   (Pretty (..), hang, viaShow, vsep, (<+>))
 import           GHC.Generics                (Generic)
-import Ledger (Address)
+import           Ledger                      (Address)
 import           Ledger.Constraints.OffChain (UnbalancedTx)
 import           Ledger.Slot                 (Slot)
 import           Ledger.Value                (Value)
-import Wallet.Emulator.Error (WalletAPIError)
+import           Wallet.Emulator.Error       (WalletAPIError)
 
 data RequestHandlerLogMsg =
     SlotNoficationTargetVsCurrent Slot Slot
