@@ -84,6 +84,7 @@ type ContractConstraints s =
     , V.Forall (Output s) JSON.ToJSON
     )
 
+-- | Messages sent to, and received by, threads in the emulator.
 data EmulatorMessage =
     BlockAdded [Tx]
     | NewSlot Slot
@@ -102,6 +103,7 @@ newtype EmulatorThreads =
 
 makeLenses ''EmulatorThreads
 
+-- | Effects available to emulator agent threads.
 type EmulatorAgentThreadEffs effs =
     LogMsg ContractInstanceLog
     ': Reader Wallet
@@ -209,7 +211,6 @@ data ContractInstanceLog =
 instance Pretty ContractInstanceLog where
     pretty ContractInstanceLog{_cilMessage, _cilId, _cilTag} =
         hang 2 $ vsep [pretty _cilId <+> braces (pretty _cilTag) <> colon, pretty _cilMessage]
-
 
 -- | The state of a running contract instance with schema @s@ and error type @e@
 data ContractInstanceState s e a =

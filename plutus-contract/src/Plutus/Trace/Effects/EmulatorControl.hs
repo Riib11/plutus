@@ -6,6 +6,11 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
+{-
+
+An effect for inspecting & changing the internal state of the emulator.
+
+-}
 module Plutus.Trace.Effects.EmulatorControl(
     EmulatorControl(..)
     , setSigningProcess
@@ -42,6 +47,8 @@ data EmulatorControl r where
     ThawContractInstance :: ContractInstanceId -> EmulatorControl ()
     ChainState :: EmulatorControl ChainState
 
+-- | Interpret the 'EmulatorControl' effect in the 'MultiAgentEffect' and
+--   scheduler system calls.
 handleEmulatorControl ::
     forall effs effs2.
     ( Member (State EmulatorThreads) effs
@@ -57,9 +64,11 @@ handleEmulatorControl = \case
     AgentState wllt -> gets @EmulatorState (fromMaybe (W.emptyWalletState wllt) . view (EM.walletStates . at wllt))
     FreezeContractInstance i -> do
         threadId <- getThread i
+        -- see note [Freeze and Thaw]
         void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId Freeze)
     ThawContractInstance i -> do
         threadId <- getThread i
+        -- see note [Freeze and Thaw]
         void $ mkSysCall @effs2 @EmulatorMessage Normal (Thaw threadId)
     ChainState -> gets (view EM.chainState)
 

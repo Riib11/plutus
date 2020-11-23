@@ -15,7 +15,16 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
+{-
 
+Implements a scheduler for cooperative multitasking. The scheduler supports
+system calls for suspending threads, sending messages to other threads, and
+starting new threads. Threads have a priority (see note [Thread Priority]).
+They can send and receive messages of a user-defined type. The scheduler is
+implemented as handler of the 'Control.Monad.Freer.Coroutine.Yield' effect, and
+threads are @freer-simple@ programs that use that effect.
+
+-}
 module Plutus.Trace.Scheduler(
     ThreadId
     , SysCall(..)
@@ -57,15 +66,80 @@ import           Data.Text.Prettyprint.Doc.Extras (PrettyShow (..), Tagged (..))
 import           GHC.Generics                     (Generic)
 import           Plutus.Trace.Tag                 (Tag)
 
+{- Note [Thread Tag]
+
+Within the scheduler, threads are identified by their 'ThreadId'. The thread
+ID is assigned at runtime when a new thread is started. So the thread ID
+depends on the state of the scheduler at the time the thread is started.
+
+This makes it hard to refer to individual threads outside of the scheduler,
+for example, when we inspect the emulator log. To make it easier to find
+threads later on in the log, each thread also has a user-defined tag. The
+scheduler maintains a map of tags to thread IDs, so that we can send messages
+to threads that we only know the tag of.
+
+It is up to the user to ensure that tags are unique. If two threads have the
+same tag, the functioning of the scheduler is not affected (each thread still
+has its own mailbox), but the tag can no longer be used to uniquely identify a
+thread. In practice however the number of interesting threads is small enough
+that finding distinct tags for them is not a problem.
+
+-}
+
+-- | Unique identifier of a thread.
 newtype ThreadId = ThreadId { unThreadId :: Int }
     deriving stock (Eq, Ord, Show, Generic)
     deriving anyclass (Hashable, ToJSON, FromJSON)
     deriving Pretty via (Tagged "Thread" Int)
 
+-- | ID of the first thread.
 initialThreadId :: ThreadId
 initialThreadId = ThreadId 0
 
-data Priority = Normal | Sleeping | Frozen
+{- Note [Thread Priority]
+
+When a thread yields control it assigns itself one of three priorities. The
+priority determines how long the thread goes to sleep for. The scheduler
+maintains one queue of suspended threads for each priority.
+
+In the emulator, we use thread priorities to drive the progress of simulated
+time. See note [Simulator Time] in 'Plutus.Trace.Emulator.System' for details.
+
+-}
+
+{- Note [Freeze and Thaw]
+
+Freezing and unfreezing use two slightly different mechanims.
+
+To freeze a thread, that thread must suspend itself with the 'Frozen' priority.
+If we want to be able to freeze a thread from the outside, we need to send it a
+message instructing it to do so. (In the emulator, this is the 'Freeze'
+constructor of 'Plutus.Trace.Emulator.Types.EmulatorMessage'.)
+
+@
+  mkSysCall @_ @EmulatorMessage Normal (Message threadId Freeze)
+@
+
+
+To unfreeze a thread, we use the 'Thaw' system call of the emulator.
+
+@
+  mkSysCall @_ @systemEvent Normal (Thaw threadId)
+@
+
+Note how the sytem event type in the first line is instantiated to
+'EmulatorMessage', and in the second line it is free. The goal of this
+somewhat roundabout approach is to avoid having to fish out the thread from the
+queues of the scheduler state. Instead, we tell the thread to freeze itself, so
+we don't have to mess with the queues.
+
+-}
+
+-- | Priority of a thread.
+data Priority =
+    Normal -- ^ Thread is ready to run
+    | Sleeping -- ^ Thread is sleeping, to be resumed only after an external event happens
+    | Frozen -- ^ Thread is frozen, it will only be resumed after it is manually unfrozen via the 'Thaw' sys call.
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
     deriving Pretty via (PrettyShow Priority)
@@ -77,24 +151,26 @@ data WithPriority t
         , _thread   :: t
         }
 
-type SystemCall effs systemEvent = WithPriority (SysCall effs systemEvent)
 type SuspendedThread effs systemEvent = WithPriority (EmThread effs systemEvent)
+
+
+type SystemCall effs systemEvent = WithPriority (SysCall effs systemEvent)
 
 -- | Thread that can be run by the scheduler
 data EmThread effs systemEvent =
     EmThread
-        { _continuation :: Maybe systemEvent -> Eff effs (Status effs (SystemCall effs systemEvent) (Maybe systemEvent) ())
-        , _threadId     :: ThreadId
-        , _tag          :: Tag
+        { _continuation :: Maybe systemEvent -> Eff effs (Status effs (SystemCall effs systemEvent) (Maybe systemEvent) ()) -- ^ The continuation to be run when the thread is resumed.
+        , _threadId     :: ThreadId -- ^ Thread ID
+        , _tag          :: Tag -- ^ Tag of the thread. See note [Thread Tag]
         }
 
--- | The "system calls" we can make when a 'Simulator' action.
+-- | The "system calls" we can make to the scheduler.
 data SysCall effs systemEvent
-    = Fork (ThreadId -> SuspendedThread effs systemEvent)
-    | Suspend
-    | Broadcast systemEvent
-    | Message ThreadId systemEvent
-    | Thaw ThreadId
+    = Fork (ThreadId -> SuspendedThread effs systemEvent) -- ^ Start a new thread with a new thread ID.
+    | Suspend -- ^ Suspend ourselves (the caller)
+    | Broadcast systemEvent -- ^ Send a message to all threads
+    | Message ThreadId systemEvent -- ^ Send a message to a specific thread
+    | Thaw ThreadId -- ^ Unfreeze a thread.
 
 makePrisms ''SysCall
 
@@ -104,16 +180,19 @@ data SchedulerState effs systemEvent
         { _normalPrio    :: Seq (EmThread effs systemEvent) -- ^  Threads running at normal priority
         , _sleeping      :: Seq (EmThread effs systemEvent) -- ^ Sleeping threads (waiting for an external event)
         , _frozen        :: Seq (EmThread effs systemEvent) -- ^ Frozen threads (will not be resumed until they are explicitly unfrozen)
-        , _lastThreadId  :: ThreadId
-        , _mailboxes     :: HashMap ThreadId (Seq systemEvent)
-        , _activeThreads :: Map Tag (HashSet ThreadId)
+        , _lastThreadId  :: ThreadId -- ^ Last thread id assigned to a thread
+        , _mailboxes     :: HashMap ThreadId (Seq systemEvent) -- ^ The mailboxes of all active threads.
+        , _activeThreads :: Map Tag (HashSet ThreadId) -- ^ Map of tags to thread IDs. See note [Thread Tag]
         }
 
 makeLenses ''SchedulerState
 
+-- | Remove a thread from the set of active threads. Usually called when the
+--   thread is finished.
 removeActiveThread :: ThreadId -> SchedulerState effs systemEvent -> SchedulerState effs systemEvent
 removeActiveThread tid = over (activeThreads . mapped) (HashSet.delete tid)
 
+-- | A suspended thread with a priority and the thread itself.
 suspendThread :: Priority -> EmThread effs systemEvent -> SuspendedThread effs systemEvent
 suspendThread = WithPriority
 
@@ -131,31 +210,37 @@ mkThread tag prio action tid =
                 }
             }
 
+-- | Make a system call
 mkSysCall :: forall effs systemEvent effs2.
     Member (Yield (SystemCall effs systemEvent) (Maybe systemEvent)) effs2
-    => Priority
-    -> SysCall effs systemEvent
+    => Priority -- ^ The 'Priority' of the caller
+    -> SysCall effs systemEvent -- ^ The system call
     -> Eff effs2 (Maybe systemEvent)
 mkSysCall prio sc = yield @(SystemCall effs systemEvent) @(Maybe systemEvent) (WithPriority prio sc) id
 
--- | Start a new thread with the given priority
+-- | Start a new thread
 fork :: forall effs systemEvent effs2.
     Member (Yield (SystemCall effs systemEvent) (Maybe systemEvent)) effs2
-    => Tag
-    -> Priority
+    => Tag -- ^ Tag of the new thread. See note [Thread Tag]
+    -> Priority -- ^ Priority of the new thread.
     -> Eff (Reader ThreadId ': Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
     -> Eff effs2 (Maybe systemEvent)
 fork tag prio action = mkSysCall prio (Fork $ mkThread tag prio action)
 
+-- | Suspend the current thread
 sleep :: forall effs systemEvent effs2.
     Member (Yield (SystemCall effs systemEvent) (Maybe systemEvent)) effs2
     => Priority
     -> Eff effs2 (Maybe systemEvent)
 sleep prio = mkSysCall @effs @systemEvent @effs2 prio Suspend
 
+-- | Tag of the initial thread.
 initialThreadTag :: Tag
 initialThreadTag = "initial thread"
 
+-- | Handle the 'Yield (SystemCall effs systemEvent) (Maybe systemEvent)'
+--   effect using the scheduler, see note [Scheduler]. 'runThreads' only
+--   returns when all threads are finished.
 runThreads ::
     forall effs systemEvent.
     ( Eq systemEvent
@@ -192,6 +277,8 @@ loop s = do
             case result of
                 Done () -> do
                     logDebug (mkLog Stopped)
+                    -- TODO: Check if this was the initial thread, and kill
+                    -- all other threads in that case?
                     loop $ schedulerState & removeActiveThread _threadId
                 Continue WithPriority{_priority, _thread=sysCall} k -> do
                     logDebug SchedulerLog{slEvent=Suspended, slThread=_threadId, slPrio=_priority, slTag = _tag}
@@ -200,6 +287,7 @@ loop s = do
                     loop newState
         _ -> pure ()
 
+-- | Deal with a system call from a running thread.
 handleSysCall ::
     ( Eq systemEvent
     , Member (LogMsg SchedulerLog) effs
@@ -228,12 +316,15 @@ handleSysCall sysCall schedulerState = case sysCall of
                 & normalPrio <>~ thawed
 
 
+-- | Return a fresh thread ID and increment the counter
 nextThreadId :: SchedulerState effs systemEvent -> (SchedulerState effs systemEvent, ThreadId)
 nextThreadId s = (s & lastThreadId %~ ThreadId . succ . unThreadId, s ^. lastThreadId)
 
+-- | State of the scheduler before any threads are run.
 initialState :: SchedulerState effs systemEvent
 initialState = SchedulerState Seq.empty Seq.empty Seq.empty initialThreadId HashMap.empty Map.empty
 
+-- | Add a suspended thread to the queue.
 enqueue :: SuspendedThread effs systemEvent -> SchedulerState effs systemEvent -> SchedulerState effs systemEvent
 enqueue WithPriority {_priority, _thread} s =
     case _priority of
@@ -241,8 +332,8 @@ enqueue WithPriority {_priority, _thread} s =
         Sleeping -> s & sleeping %~ (|> _thread)
         Frozen   -> s & frozen %~ (|> _thread)
 
--- | Result of calling 'dequeue'. Either a thread that is ready to receive a message,
---   or no more threads.
+-- | Result of calling 'dequeue'. Either a thread that is ready to receive a
+--   message, or no more threads.
 data SchedulerDQResult effs systemEvent
     = AThread (EmThread effs systemEvent) (Maybe systemEvent) (SchedulerState effs systemEvent) Priority
     | NoMoreThreads
@@ -254,6 +345,8 @@ dequeue s = case dequeueThread s of
         Nothing       -> AThread thread Nothing s' prio
         Just (s'', m) -> AThread thread (Just m) s'' prio
 
+-- | Find the next thread that is ready to be resumed.
+--   See note [Thread Priority]
 dequeueThread :: SchedulerState effs systemEvent -> Maybe (SchedulerState effs systemEvent, EmThread effs systemEvent, Priority)
 dequeueThread s =
     case s ^. normalPrio of
@@ -262,6 +355,7 @@ dequeueThread s =
                 x :<| xs -> Just (s & sleeping .~ xs, x, Sleeping)
                 Empty    -> Nothing
 
+-- | Get the first message for the thread.
 dequeueMessage :: SchedulerState effs systemEvent -> ThreadId -> Maybe (SchedulerState effs systemEvent, systemEvent)
 dequeueMessage s i = do
     mailbox <- s ^. mailboxes . at i

@@ -5,6 +5,11 @@
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators    #-}
+{-
+
+An effect for generating fresh contract instance IDs.
+
+-}
 module Plutus.Trace.Effects.ContractInstanceId(
     ContractInstanceIdEff
     , nextId

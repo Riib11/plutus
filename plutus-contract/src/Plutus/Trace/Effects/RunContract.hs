@@ -13,7 +13,11 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
+{-
 
+An effect for starting contract instances and calling endpoints on them.
+
+-}
 module Plutus.Trace.Effects.RunContract(
     RunContract(..)
     , ContractConstraints
@@ -78,6 +82,7 @@ data RunContract r where
 
 makeEffect ''RunContract
 
+-- | Call an endpoint on a contract instance.
 callEndpoint ::
     forall l ep s e effs.
     (ContractConstraints s, HasEndpoint l ep s, Member RunContract effs) => ContractHandle s e -> ep -> Eff effs ()
