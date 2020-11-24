@@ -103,6 +103,7 @@ tests = testGroup "crowdfunding"
             startCampaign
             makeContribution w2 (Ada.lovelaceValueOf 5)
             void $ makeContribution w3 (Ada.lovelaceValueOf 5)
+            void $ Trace.waitUntilSlot 31
 
     , Lib.goldenPir "test/Spec/crowdfunding.pir" $$(PlutusTx.compile [|| mkValidator ||])
     ,   let

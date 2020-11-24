@@ -90,7 +90,6 @@ data EmulatorMessage =
     BlockAdded [Tx]
     | NewSlot Slot
     | EndpointCall ThreadId EndpointDescription JSON.Value
-    | EndpointCallResponse (Maybe NotificationError)
     | Freeze
     | ContractInstanceStateRequest ThreadId
     | ContractInstanceStateResponse JSON.Value

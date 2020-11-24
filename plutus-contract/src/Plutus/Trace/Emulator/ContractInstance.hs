@@ -185,7 +185,6 @@ runInstance contract event = do
                 let rspMsg = case response of
                         Nothing -> Just $ EndpointNotAvailable ownId desc
                         Just _  -> Nothing
-                void $ mkSysCall @effs @EmulatorMessage Normal $ Message sender (EndpointCallResponse rspMsg)
                 sleep @effs Normal >>= runInstance contract
             Just (ContractInstanceStateRequest sender) -> do
                 state <- get @(ContractInstanceState s e ())

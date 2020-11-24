@@ -145,7 +145,7 @@ interpretEmulatorTrace conf action =
     -- add a wait action to the beginning to ensure that the
     -- initial transaction gets validated before the wallets
     -- try to spend their funds
-    let action' = Waiting.nextSlot >> action
+    let action' = Waiting.nextSlot >> action >> Waiting.nextSlot
         wallets = conf ^. initialDistribution . to Map.keys
     in
     evalState @EmulatorThreads mempty

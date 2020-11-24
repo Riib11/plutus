@@ -122,7 +122,7 @@ tests =
                 (walletFundsChange w1 (Ada.lovelaceValueOf (-20))
                     .&&. assertNoFailedTransactions
                     .&&. assertDone theContract tag (const True) "all blockchain events should be processed")
-                (void $ activateContract w1 theContract tag)
+                (void $ activateContract w1 theContract tag >> Trace.waitUntilSlot 3)
 
         , let l = endpoint @"1" >> endpoint @"2"
               r = endpoint @"3" >> endpoint @"4"

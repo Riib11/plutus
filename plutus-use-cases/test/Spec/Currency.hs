@@ -18,12 +18,12 @@ tests = testGroup "currency"
     [ checkPredicate
         "can create a new currency"
         (assertDone theContract (Trace.walletInstanceTag w1) (const True) "currency contract not done")
-        (void $ Trace.activateContractWallet w1 (void theContract))
+        (void $ Trace.activateContractWallet w1 (void theContract) >> Trace.nextSlot)
 
     , checkPredicate
         "script size is reasonable"
         (assertDone theContract (Trace.walletInstanceTag w1) ((25000 >=) . Ledger.scriptSize . Ledger.unMonetaryPolicyScript . Cur.curPolicy) "script too large")
-        (void $ Trace.activateContractWallet w1 (void theContract))
+        (void $ Trace.activateContractWallet w1 (void theContract) >> Trace.nextSlot)
 
     ]
 
