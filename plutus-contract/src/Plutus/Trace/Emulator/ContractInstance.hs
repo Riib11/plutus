@@ -118,7 +118,7 @@ contractThread ContractHandle{chInstanceId, chContract, chInstanceTag} = do
         $ do
             logInfo Started
             logNewMessages @s @e Seq.empty
-            logCurrentRequests
+            logCurrentRequests @s @e
             msg <- mkSysCall @effs @EmulatorMessage Normal Suspend
             runInstance chContract msg
 
@@ -179,7 +179,6 @@ runInstance contract event = do
                 response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
                     guard $ handlerName h == eventName e
                     pure e
-                logResponse response
                 sleep @effs Normal >>= runInstance contract
             Just (Notify n@Notification{notificationContractEndpoint=EndpointDescription ep, notificationContractArg}) -> do
                 logInfo $ ReceiveNotification n
@@ -188,7 +187,6 @@ runInstance contract event = do
                 response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
                     guard $ handlerName h == eventName e
                     pure e
-                logResponse response
                 sleep @effs Normal >>= runInstance contract
             Just (ContractInstanceStateRequest sender) -> do
                 state <- get @(ContractInstanceState s e ())
@@ -212,7 +210,6 @@ runInstance contract event = do
                             -- other active threads have had their turn
                             (const Normal)
                             response
-                logResponse response
                 sleep @effs prio >>= runInstance contract
 
 decodeEvent ::
@@ -282,6 +279,7 @@ respondToRequest :: forall s e effs.
     , Member ContractRuntimeEffect effs
     , Member (Reader ContractInstanceId) effs
     , Member (LogMsg ContractInstanceMsg) effs
+    , ContractConstraints s
     )
     => Contract s e ()
     -> RequestHandler (Reader ContractInstanceId ': ContractRuntimeEffect ': EmulatedWalletEffects) (Handlers s) (Event s)
@@ -307,6 +305,7 @@ respondToRequest contract f = do
                 $ subsume @(Reader ContractInstanceId) hdl'
     response <- response_
     traverse_ (addResponse @s @e contract) response
+    logResponse @s @e response
     pure response
 
 ---
@@ -314,18 +313,24 @@ respondToRequest contract f = do
 ---
 
 logResponse ::  forall s e effs.
-    ( ContractConstraints s )
+    ( ContractConstraints s
+    , Member (LogMsg ContractInstanceMsg) effs
+    , Member (State (ContractInstanceState s e ())) effs
+    )
     => Maybe (Response (Event s))
-    -> Eff (ContractInstanceThreadEffs s e effs) ()
+    -> Eff effs ()
 logResponse = \case
     Nothing -> logDebug NoRequestsHandled
     Just rsp -> do
         logDebug $ HandledRequest $ fmap JSON.toJSON rsp
-        logCurrentRequests
+        logCurrentRequests @s @e
 
 logCurrentRequests :: forall s e effs.
-    ( ContractConstraints s )
-    => Eff (ContractInstanceThreadEffs s e effs) ()
+    ( ContractConstraints s
+    , Member (State (ContractInstanceState s e ())) effs
+    , Member (LogMsg ContractInstanceMsg) effs
+    )
+    => Eff effs ()
 logCurrentRequests = do
     hks <- getHooks @s @e
     logDebug $ CurrentRequests $ fmap (fmap JSON.toJSON) hks
