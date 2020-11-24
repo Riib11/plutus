@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Spec.ErrorHandling(tests) where
 
+import           Control.Monad                                          (void)
 import           Language.Plutus.Contract.Test
 
 import           Language.PlutusTx.Coordination.Contracts.ErrorHandling
@@ -17,12 +18,14 @@ tests = testGroup "error handling"
         $ do
             hdl <- Trace.activateContractWallet @_ @MyError w1 contract
             Trace.callEndpoint @"throwError" hdl ()
+            void $ Trace.nextSlot
 
     , checkPredicate "catch an error"
         (assertDone @_ @MyError contract (Trace.walletInstanceTag w1) (const True) "should be done")
         $ do
             hdl <- Trace.activateContractWallet @_ @MyError w1 contract
             Trace.callEndpoint @"catchError" hdl ()
+            void $ Trace.nextSlot
 
     ]
 

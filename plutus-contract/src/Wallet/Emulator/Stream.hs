@@ -14,6 +14,7 @@ module Wallet.Emulator.Stream(
     EmulatorConfig(..)
     , EmulatorErr(..)
     , initialDistribution
+    , onInitialThreadStopped
     , defaultEmulatorConfig
     , runTraceStream
     -- * Stream manipulation
@@ -50,6 +51,7 @@ import           Wallet.Emulator.MultiAgent             (EmulatorState, Emulator
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
 import           Language.Plutus.Contract.Trace         (InitialDistribution, defaultDist)
 import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
+import           Plutus.Trace.Scheduler                 (OnInitialThreadStopped (Stop))
 
 -- | Finish the stream at the end of the given slot.
 takeUntilSlot :: forall effs a. Slot -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
@@ -106,15 +108,17 @@ runTraceStream conf =
     . subsume @(State EmulatorState)
     . raiseEnd6
 
-newtype EmulatorConfig =
+data EmulatorConfig =
     EmulatorConfig
-        { _initialDistribution :: InitialDistribution
+        { _initialDistribution    :: InitialDistribution
+        , _onInitialThreadStopped :: OnInitialThreadStopped
         }
 
 defaultEmulatorConfig :: EmulatorConfig
 defaultEmulatorConfig =
     EmulatorConfig
         { _initialDistribution = defaultDist
+        , _onInitialThreadStopped = Stop
         }
 
 initialState :: EmulatorConfig -> EM.EmulatorState

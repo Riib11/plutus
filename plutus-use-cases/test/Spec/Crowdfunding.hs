@@ -61,7 +61,7 @@ tests = testGroup "crowdfunding"
     , checkPredicateOptions (defaultCheckOptions & maxSlot .~ 20) "make contribution"
         (walletFundsChange w1 (1 `timesFeeAdjust` (-10)))
         $ let contribution = Ada.lovelaceValueOf 10
-          in makeContribution w1 contribution
+          in makeContribution w1 contribution >> void Trace.nextSlot
 
     , checkPredicate "make contributions and collect"
         (walletFundsChange w1 (1 `timesFeeAdjust` 21))
@@ -119,7 +119,7 @@ tests = testGroup "crowdfunding"
         (pure $ renderWalletLog successfulCampaign)
 
     , goldenVsString
-        "renders the emulator log sensiblty"
+        "renders the emulator log sensibly"
         "test/Spec/crowdfundingEmulatorTestOutput.txt"
         (pure $ renderEmulatorLog successfulCampaign)
 
@@ -136,7 +136,6 @@ renderWalletLog trace =
             run
             $ foldEmulatorStreamM (L.generalize $ Folds.instanceLog (Trace.walletInstanceTag w1))
             $ filterLogLevel Info
-            $ takeUntilSlot 30
             $ Trace.runEmulatorStream Trace.defaultEmulatorConfig trace
     in BSL.fromStrict $ T.encodeUtf8 $ renderStrict $ layoutPretty defaultLayoutOptions $ vsep $ fmap pretty $ S.fst' result
 
@@ -146,6 +145,5 @@ renderEmulatorLog trace =
             run
             $ foldEmulatorStreamM (L.generalize Folds.emulatorLog)
             $ filterLogLevel Info
-            $ takeUntilSlot 30
             $ Trace.runEmulatorStream Trace.defaultEmulatorConfig trace
     in BSL.fromStrict $ T.encodeUtf8 $ renderStrict $ layoutPretty defaultLayoutOptions $ vsep $ fmap pretty $ S.fst' result

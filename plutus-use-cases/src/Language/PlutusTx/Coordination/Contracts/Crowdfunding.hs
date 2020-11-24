@@ -274,4 +274,5 @@ successfulCampaign = do
     makeContribution (Wallet 2) (Ada.lovelaceValueOf 10)
     makeContribution (Wallet 3) (Ada.lovelaceValueOf 10)
     makeContribution (Wallet 4) (Ada.lovelaceValueOf 1)
+    void $ Trace.waitUntilSlot 21
 

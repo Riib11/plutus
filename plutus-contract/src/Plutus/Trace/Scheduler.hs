@@ -36,6 +36,7 @@ module Plutus.Trace.Scheduler(
     , EmThread(..)
     , SchedulerState(..)
     -- * Thread API
+    , OnInitialThreadStopped(..)
     , runThreads
     , fork
     , sleep
@@ -48,6 +49,7 @@ module Plutus.Trace.Scheduler(
 
 
 import           Control.Lens                     hiding (Empty)
+import           Control.Monad                    (unless)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Coroutine
 import           Control.Monad.Freer.Log          (LogMsg, logDebug)
@@ -153,7 +155,6 @@ data WithPriority t
 
 type SuspendedThread effs systemEvent = WithPriority (EmThread effs systemEvent)
 
-
 type SystemCall effs systemEvent = WithPriority (SysCall effs systemEvent)
 
 -- | Thread that can be run by the scheduler
@@ -238,6 +239,12 @@ sleep prio = mkSysCall @effs @systemEvent @effs2 prio Suspend
 initialThreadTag :: Tag
 initialThreadTag = "initial thread"
 
+-- | What to do when the initial thread finishes.
+data OnInitialThreadStopped =
+    KeepGoing -- ^ Keep going until all threads have finished.
+    | Stop -- ^ Stop right away.
+    deriving stock (Eq, Ord, Show)
+
 -- | Handle the 'Yield (SystemCall effs systemEvent) (Maybe systemEvent)'
 --   effect using the scheduler, see note [Scheduler]. 'runThreads' only
 --   returns when all threads are finished.
@@ -246,15 +253,16 @@ runThreads ::
     ( Eq systemEvent
     , Member (LogMsg SchedulerLog) effs
     )
-    => Eff (Reader ThreadId ': Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
+    => OnInitialThreadStopped
+    -> Eff (Reader ThreadId ': Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
     -> Eff effs ()
-runThreads e = do
+runThreads o e = do
     k <- runC $ runReader initialThreadId e
     case k of
         Done () -> pure ()
         Continue _ k' ->
             let initialThread = EmThread{_continuation = k', _threadId = initialThreadId, _tag = initialThreadTag}
-            in loop
+            in loop o
                 $ initialState
                     & activeThreads . at initialThreadTag . non mempty %~ HashSet.insert initialThreadId
                     & mailboxes . at initialThreadId .~ Just Seq.empty
@@ -266,9 +274,10 @@ loop :: forall effs systemEvent.
     ( Eq systemEvent
     , Member (LogMsg SchedulerLog) effs
     )
-    => SchedulerState effs systemEvent
+    => OnInitialThreadStopped
+    -> SchedulerState effs systemEvent
     -> Eff effs ()
-loop s = do
+loop o s = do
     case dequeue s of
         AThread EmThread{_continuation, _threadId, _tag} event schedulerState prio -> do
             let mkLog e = SchedulerLog{slEvent=e, slThread=_threadId, slPrio=prio, slTag = _tag}
@@ -277,14 +286,13 @@ loop s = do
             case result of
                 Done () -> do
                     logDebug (mkLog Stopped)
-                    -- TODO: Check if this was the initial thread, and kill
-                    -- all other threads in that case?
-                    loop $ schedulerState & removeActiveThread _threadId
+                    unless (_threadId == initialThreadId && o == Stop) $
+                        loop o $ schedulerState & removeActiveThread _threadId
                 Continue WithPriority{_priority, _thread=sysCall} k -> do
                     logDebug SchedulerLog{slEvent=Suspended, slThread=_threadId, slPrio=_priority, slTag = _tag}
                     let thisThread = suspendThread _priority EmThread{_threadId=_threadId, _continuation=k, _tag = _tag}
                     newState <- schedulerState & enqueue thisThread & handleSysCall sysCall
-                    loop newState
+                    loop o newState
         _ -> pure ()
 
 -- | Deal with a system call from a running thread.

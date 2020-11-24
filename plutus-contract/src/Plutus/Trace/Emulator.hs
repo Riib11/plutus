@@ -9,7 +9,11 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
+{-
 
+An emulator trace is a contract trace that can be run in the Plutus emulator.
+
+-}
 module Plutus.Trace.Emulator(
     Emulator
     , EmulatorTrace
@@ -68,7 +72,7 @@ import qualified Wallet.Emulator.Chain                   as ChainState
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
                                                           MultiAgentEffect, schedulerEvent)
 import           Wallet.Emulator.Stream                  (EmulatorConfig (..), EmulatorErr (..), defaultEmulatorConfig,
-                                                          initialDistribution, runTraceStream)
+                                                          initialDistribution, onInitialThreadStopped, runTraceStream)
 import qualified Wallet.Emulator.Wallet                  as Wallet
 
 import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
@@ -146,7 +150,7 @@ interpretEmulatorTrace conf action =
     evalState @EmulatorThreads mempty
         $ handleDeterministicIds
         $ interpret (mapLog (review schedulerEvent))
-        $ runThreads
+        $ runThreads (conf ^. onInitialThreadStopped)
         $ do
             raise $ launchSystemThreads wallets
             void $ handleEmulatorTrace action'

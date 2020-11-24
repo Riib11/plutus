@@ -247,3 +247,9 @@ addEventInstanceState (Contract c) event s@ContractInstanceState{instContractSta
 makeLenses ''ContractInstanceLog
 makePrisms ''ContractInstanceMsg
 
+
+-- | What to do when the initial thread finishes.
+data OnInitialThreadStopped =
+    KeepGoing -- ^ Keep going until all threads have finished.
+    | Stop -- ^ Stop right away.
+    deriving stock (Eq, Ord, Show)

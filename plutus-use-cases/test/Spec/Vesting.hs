@@ -17,7 +17,6 @@ import           Spec.Lib                                         as Lib
 
 import qualified Language.PlutusTx                                as PlutusTx
 import           Language.PlutusTx.Coordination.Contracts.Vesting
-import           Language.PlutusTx.Lattice
 import qualified Language.PlutusTx.Numeric                        as Numeric
 import qualified Ledger
 import qualified Ledger.Ada                                       as Ada
@@ -40,6 +39,7 @@ tests =
         $ do
             hdl <- Trace.activateContractWallet w2 con
             Trace.callEndpoint @"vest funds" hdl ()
+            void $ Trace.waitNSlots 1
 
     , checkPredicate "retrieve some funds"
         (walletFundsChange w2 (Numeric.negate $ totalAmount vesting)
@@ -68,7 +68,7 @@ tests =
             Trace.callEndpoint @"vest funds" hdl2 ()
             Trace.waitNSlots 20
             Trace.callEndpoint @"retrieve funds" hdl1 (totalAmount vesting)
-            void $ Trace.waitNSlots 1
+            void $ Trace.waitNSlots 2
 
     , Lib.goldenPir "test/Spec/vesting.pir" $$(PlutusTx.compile [|| validate ||])
     , HUnit.testCase "script size is reasonable" (Lib.reasonable (vestingScript vesting) 33000)
@@ -92,7 +92,7 @@ retrieveFundsTrace = do
     Trace.callEndpoint @"vest funds" hdl2 ()
     Trace.waitNSlots 10
     Trace.callEndpoint @"retrieve funds" hdl1 (Ada.lovelaceValueOf 10)
-    void $ Trace.waitNSlots 1
+    void $ Trace.waitNSlots 2
 
 expectedError :: VestingError
 expectedError =
