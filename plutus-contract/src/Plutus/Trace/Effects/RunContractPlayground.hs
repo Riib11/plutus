@@ -35,7 +35,8 @@ import           Control.Monad.Freer.State               (State, gets, modify)
 import           Control.Monad.Freer.TH                  (makeEffect)
 import qualified Data.Aeson                              as JSON
 import           Data.Map                                (Map)
-import           Language.Plutus.Contract                (Contract (..), ContractInstanceId, HasBlockchainActions)
+import           Language.Plutus.Contract                (Contract (..), ContractInstanceId, EndpointDescription (..),
+                                                          HasBlockchainActions)
 import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, nextId)
 import           Plutus.Trace.Emulator.ContractInstance  (EmulatorRuntimeError, contractThread, getThread)
 import           Plutus.Trace.Emulator.Types             (ContractConstraints, ContractHandle (..),
@@ -126,7 +127,7 @@ handleCallEndpoint wllt endpointName endpointValue = do
         thr = do
             threadId <- getInstance wllt >>= getThread
             ownId <- ask @ThreadId
-            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall ownId epJson)
+            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall ownId (EndpointDescription endpointName) epJson)
     void $ fork @effs2 @EmulatorMessage "call endpoint" Normal thr
 
 getInstance ::

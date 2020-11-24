@@ -93,7 +93,6 @@ import           Wallet.Types                                      (ContractInst
 
 data EndpointError =
     EndpointNotActive (Maybe Wallet) EndpointDescription
-    | MoreThanOneEndpointActive EndpointDescription
     deriving stock (Eq, Show, Generic)
     deriving anyclass (JSON.ToJSON, JSON.FromJSON)
 
@@ -101,13 +100,10 @@ instance Pretty EndpointError where
     pretty = \case
         EndpointNotActive w e ->
             "Endpoint not active:" <+> pretty w <+> pretty e
-        MoreThanOneEndpointActive e ->
-            "More than one endpoint active:" <+> pretty e
 
 toNotifyError :: ContractInstanceId -> EndpointError -> NotificationError
 toNotifyError i = \case
     EndpointNotActive _ e       -> EndpointNotAvailable i e
-    MoreThanOneEndpointActive e -> MoreThanOneEndpointAvailable i e
 
 -- | Error produced while running a trace. Either a contract-specific
 --   error (of type 'e'), or an 'EM.AssertionError' from the emulator.

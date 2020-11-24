@@ -52,8 +52,7 @@ import           Plutus.Trace.Emulator.ContractInstance     (EmulatorRuntimeErro
 import           Plutus.Trace.Emulator.System               (launchSystemThreads)
 import           Plutus.Trace.Emulator.Types                (ContractConstraints, EmulatorMessage (..), EmulatorThreads,
                                                              walletInstanceTag)
-import           Plutus.Trace.Scheduler                     (OnInitialThreadStopped (KeepGoing), SystemCall, ThreadId,
-                                                             runThreads)
+import           Plutus.Trace.Scheduler                     (OnInitialThreadStopped, SystemCall, ThreadId, runThreads)
 import           Streaming                                  (Stream)
 import           Streaming.Prelude                          (Of)
 import           Wallet.Emulator.Chain                      (ChainControlEffect, ChainEffect)

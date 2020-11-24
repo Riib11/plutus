@@ -72,7 +72,8 @@ import           Ledger.Slot                        (Slot (..))
 import           Ledger.Tx                          (Tx)
 import           Plutus.Trace.Scheduler             (SystemCall, ThreadId)
 import           Wallet.Emulator.Wallet             (Wallet (..))
-import           Wallet.Types                       (ContractInstanceId, Notification (..), NotificationError)
+import           Wallet.Types                       (ContractInstanceId, EndpointDescription, Notification (..),
+                                                     NotificationError)
 
 type ContractConstraints s =
     ( V.Forall (Output s) V.Unconstrained1
@@ -88,9 +89,8 @@ type ContractConstraints s =
 data EmulatorMessage =
     BlockAdded [Tx]
     | NewSlot Slot
-    | EndpointCall ThreadId JSON.Value
-    -- | EndpointCallResponse
-    -- | Notify Notification
+    | EndpointCall ThreadId EndpointDescription JSON.Value
+    | EndpointCallResponse (Maybe NotificationError)
     | Freeze
     | ContractInstanceStateRequest ThreadId
     | ContractInstanceStateResponse JSON.Value
@@ -164,6 +164,8 @@ data ContractInstanceMsg =
     | StoppedNoError
     | StoppedWithError String
     | ReceiveEndpointCall JSON.Value
+    | ReceiveEndpointCallSuccess
+    | ReceiveEndpointCallFailure NotificationError
     | NoRequestsHandled
     | HandledRequest (Response JSON.Value)
     | CurrentRequests [Request JSON.Value]
@@ -183,6 +185,8 @@ instance Pretty ContractInstanceMsg where
         StoppedNoError -> "Contract instance stopped (no errors)"
         StoppedWithError e -> "Contract instance stopped with error:" <+> pretty e
         ReceiveEndpointCall v -> "Receive endpoint call:" <+> viaShow v
+        ReceiveEndpointCallSuccess -> "Endpoint call succeeded"
+        ReceiveEndpointCallFailure f -> "Endpoint call failed:" <+> pretty f
         NoRequestsHandled -> "No requests handled"
         HandledRequest rsp -> "Handled request:" <+> pretty (take 50 . show . JSON.encode <$> rsp)
         CurrentRequests lst -> "Current requests" <+> parens (pretty (length lst)) <> colon <+> fillSep (pretty . fmap (take 50 . show . JSON.encode) <$> lst)

@@ -75,6 +75,8 @@ type ContractInstanceThreadEffs s e effs =
     ': LogMsg ContractInstanceMsg
     ': EmulatorAgentThreadEffs effs
 
+-- | Handle 'ContractRuntimeEffect' by sending the notification to the
+--   receiving contract's thread
 handleContractRuntime ::
     forall effs effs2.
     ( Member (State EmulatorThreads) effs2
@@ -97,7 +99,7 @@ handleContractRuntime = interpret $ \case
                 ownId <- ask @ThreadId
                 let Notification{notificationContractEndpoint=EndpointDescription ep, notificationContractArg} = n
                     vl = object ["tag" JSON..= ep, "value" JSON..= EndpointValue notificationContractArg]
-                    e = Message threadId (EndpointCall ownId vl)
+                    e = Message threadId (EndpointCall ownId (EndpointDescription ep) vl)
                 _ <- mkSysCall @effs @EmulatorMessage Normal e
                 logInfo $ NotificationSuccess n
                 pure Nothing
@@ -175,16 +177,20 @@ runInstance contract event = do
             Just Freeze -> do
                 logInfo Freezing
                 sleep @effs Frozen >>= runInstance contract
-            Just (EndpointCall _sender vl) -> do
+            Just (EndpointCall sender desc vl) -> do
                 logInfo $ ReceiveEndpointCall vl
                 -- TODO:
                 -- check if the endpoint is active and (maybe - configurable) throw an error if it isn't
                 e <- decodeEvent @s vl
-                _response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
+                response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
                     guard $ handlerName h == eventName e
                     pure e
+                ownId <- ask @ContractInstanceId
+                let rspMsg = case response of
+                        Nothing -> Just $ EndpointNotAvailable ownId desc
+                        Just _  -> Nothing
+                void $ mkSysCall @effs @EmulatorMessage Normal $ Message sender (EndpointCallResponse rspMsg)
                 sleep @effs Normal >>= runInstance contract
-                -- TODO: Send response back to sender
             Just (ContractInstanceStateRequest sender) -> do
                 state <- get @(ContractInstanceState s e ())
                 let stateJSON = JSON.toJSON state

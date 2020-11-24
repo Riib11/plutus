@@ -26,6 +26,7 @@ module Plutus.Trace.Effects.RunContract(
     , activateContractWallet
     , callEndpoint
     , getContractState
+    , activeEndpoints
     , walletInstanceTag
     , handleRunContract
     ) where
@@ -40,12 +41,19 @@ import           Control.Monad.Freer.State                       (State)
 import           Control.Monad.Freer.TH                          (makeEffect)
 
 import qualified Data.Aeson                                      as JSON
+import           Data.Foldable                                   (toList)
+import           Data.Maybe                                      (fromMaybe, listToMaybe)
 import           Data.Proxy                                      (Proxy (..))
 import qualified Data.Row.Internal                               as V
+import           Data.Sequence                                   (Seq)
+import qualified Data.Sequence                                   as Seq
 import           Data.String                                     (IsString (..))
-import           Language.Plutus.Contract                        (Contract, HasBlockchainActions, HasEndpoint)
+import qualified GHC.TypeLits
+import           Language.Plutus.Contract                        (Contract, EndpointDescription (..),
+                                                                  HasBlockchainActions, HasEndpoint)
 import qualified Language.Plutus.Contract.Effects.ExposeEndpoint as Endpoint
-import           Language.Plutus.Contract.Schema                 (Input, Output)
+import           Language.Plutus.Contract.Resumable              (Request (rqRequest))
+import           Language.Plutus.Contract.Schema                 (Input, Output, handlerName)
 import           Plutus.Trace.Effects.ContractInstanceId         (ContractInstanceIdEff, nextId)
 import           Plutus.Trace.Emulator.ContractInstance          (contractThread, getThread)
 import           Plutus.Trace.Emulator.Types                     (ContractHandle (..), ContractInstanceState (..),
@@ -179,13 +187,27 @@ handleCallEndpoint :: forall s l e ep effs effs2.
     -> ContractHandle s e
     -> ep
     -> Eff effs ()
-handleCallEndpoint _ ContractHandle{chInstanceId} ep = do
+handleCallEndpoint p ContractHandle{chInstanceId} ep = do
     let epJson = JSON.toJSON $ Endpoint.event @l @ep @s ep
+        description = Endpoint.EndpointDescription $ GHC.TypeLits.symbolVal p
         thr = do
             threadId <- getThread chInstanceId
             ownId <- ask @ThreadId
-            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall ownId epJson)
+            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall ownId description epJson)
     void $ fork @effs2 @EmulatorMessage callEndpointTag Normal thr
+
+-- | Get the active endpoints of a contract instance.
+activeEndpoints :: forall s e effs.
+    ( Member RunContract effs
+    , ContractConstraints s
+    , JSON.FromJSON e
+    )
+    => ContractHandle s e
+    -> Eff effs [EndpointDescription]
+activeEndpoints = fmap (fmap (EndpointDescription . handlerName . rqRequest) . fromMaybe [] . lastMaybe . instHandlersHistory) . getContractState
 
 callEndpointTag :: Tag
 callEndpointTag = "call endpoint"
+
+lastMaybe :: Seq a -> Maybe a
+lastMaybe = listToMaybe . toList . Seq.reverse

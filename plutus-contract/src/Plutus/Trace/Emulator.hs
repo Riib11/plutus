@@ -27,6 +27,7 @@ module Plutus.Trace.Emulator(
     , RunContract.walletInstanceTag
     , RunContract.callEndpoint
     , RunContract.getContractState
+    , RunContract.activeEndpoints
     , EmulatedWalletAPI.liftWallet
     , EmulatedWalletAPI.payToWallet
     , Waiting.nextSlot
