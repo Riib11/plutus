@@ -179,12 +179,8 @@ runInstance contract event = do
                 sleep @effs Frozen >>= runInstance contract
             Just (EndpointCall sender desc vl) -> do
                 logInfo $ ReceiveEndpointCall vl
-                -- TODO:
-                -- check if the endpoint is active and (maybe - configurable) throw an error if it isn't
                 e <- decodeEvent @s vl
-                response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
-                    guard $ handlerName h == eventName e
-                    pure e
+                response <- respondToEvent @s @e contract e
                 ownId <- ask @ContractInstanceId
                 let rspMsg = case response of
                         Nothing -> Just $ EndpointNotAvailable ownId desc
@@ -270,6 +266,25 @@ type ContractInstanceRequests effs =
          ': LogMsg TxBalanceMsg
          ': LogMsg T.Text
          ': effs
+
+-- | Respond to a specific event
+respondToEvent ::
+    forall s e effs.
+    ( Member (State (ContractInstanceState s e ())) effs
+    , Member MultiAgentEffect effs
+    , Member (Reader Wallet) effs
+    , Member ContractRuntimeEffect effs
+    , Member (Reader ContractInstanceId) effs
+    , Member (LogMsg ContractInstanceMsg) effs
+    , ContractConstraints s
+    )
+    => Contract s e ()
+    -> Event s
+    -> Eff effs (Maybe (Response (Event s)))
+respondToEvent contract e =
+    respondToRequest @s @e contract $ RequestHandler $ \h -> do
+        guard $ handlerName h == eventName e
+        pure e
 
 -- | Inspect the open requests of a contract instance,
 --   and maybe respond to them. Returns the response that was provided to the
