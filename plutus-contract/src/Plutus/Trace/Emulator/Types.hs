@@ -88,7 +88,8 @@ type ContractConstraints s =
 data EmulatorMessage =
     BlockAdded [Tx]
     | NewSlot Slot
-    | EndpointCall JSON.Value
+    | EndpointCall ThreadId JSON.Value
+    -- | EndpointCallResponse
     | Notify Notification
     | Freeze
     | ContractInstanceStateRequest ThreadId

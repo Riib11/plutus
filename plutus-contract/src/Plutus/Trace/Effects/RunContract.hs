@@ -183,7 +183,8 @@ handleCallEndpoint _ ContractHandle{chInstanceId} ep = do
     let epJson = JSON.toJSON $ Endpoint.event @l @ep @s ep
         thr = do
             threadId <- getThread chInstanceId
-            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall epJson)
+            ownId <- ask @ThreadId
+            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall ownId epJson)
     void $ fork @effs2 @EmulatorMessage callEndpointTag Normal thr
 
 callEndpointTag :: Tag

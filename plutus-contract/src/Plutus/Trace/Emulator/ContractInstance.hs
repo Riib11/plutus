@@ -171,7 +171,7 @@ runInstance contract event = do
             Just Freeze -> do
                 logInfo Freezing
                 sleep @effs Frozen >>= runInstance contract
-            Just (EndpointCall vl) -> do
+            Just (EndpointCall sender vl) -> do
                 logInfo $ ReceiveEndpointCall vl
                 -- TODO:
                 -- check if the endpoint is active and (maybe - configurable) throw an error if it isn't

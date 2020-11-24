@@ -30,7 +30,7 @@ import           Control.Monad.Freer                     (Eff, Member, interpret
 import           Control.Monad.Freer.Coroutine           (Yield)
 import           Control.Monad.Freer.Error               (Error, throwError)
 import           Control.Monad.Freer.Log                 (LogMsg (..), mapLog)
-import           Control.Monad.Freer.Reader              (runReader)
+import           Control.Monad.Freer.Reader              (ask, runReader)
 import           Control.Monad.Freer.State               (State, gets, modify)
 import           Control.Monad.Freer.TH                  (makeEffect)
 import qualified Data.Aeson                              as JSON
@@ -41,7 +41,8 @@ import           Plutus.Trace.Emulator.ContractInstance  (EmulatorRuntimeError, 
 import           Plutus.Trace.Emulator.Types             (ContractConstraints, ContractHandle (..),
                                                           EmulatorMessage (..), EmulatorRuntimeError (..),
                                                           EmulatorThreads, walletInstanceTag)
-import           Plutus.Trace.Scheduler                  (Priority (..), SysCall (..), SystemCall, fork, mkSysCall)
+import           Plutus.Trace.Scheduler                  (Priority (..), SysCall (..), SystemCall, ThreadId, fork,
+                                                          mkSysCall)
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent' (..), MultiAgentEffect)
 import           Wallet.Emulator.Wallet                  (Wallet)
 
@@ -124,7 +125,8 @@ handleCallEndpoint wllt endpointName endpointValue = do
     let epJson = JSON.object ["tag" JSON..= endpointName, "value" JSON..= endpointValue]
         thr = do
             threadId <- getInstance wllt >>= getThread
-            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall epJson)
+            ownId <- ask @ThreadId
+            void $ mkSysCall @effs2 @EmulatorMessage Normal (Message threadId $ EndpointCall ownId epJson)
     void $ fork @effs2 @EmulatorMessage "call endpoint" Normal thr
 
 getInstance ::
