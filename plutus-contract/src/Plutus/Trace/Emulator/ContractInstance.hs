@@ -80,6 +80,7 @@ handleContractRuntime ::
     ( Member (State EmulatorThreads) effs2
     , Member (Yield (SystemCall effs EmulatorMessage) (Maybe EmulatorMessage)) effs2
     , Member (LogMsg ContractInstanceMsg) effs2
+    , Member (Reader ThreadId) effs2
     )
     => Eff (ContractRuntimeEffect ': effs2)
     ~> Eff effs2
@@ -93,7 +94,10 @@ handleContractRuntime = interpret $ \case
                 logWarn $ NotificationFailure e
                 pure $ Just e
             Just threadId -> do
-                let e = Message threadId (Notify n)
+                ownId <- ask @ThreadId
+                let Notification{notificationContractEndpoint=EndpointDescription ep, notificationContractArg} = n
+                    vl = object ["tag" JSON..= ep, "value" JSON..= EndpointValue notificationContractArg]
+                    e = Message threadId (EndpointCall ownId vl)
                 _ <- mkSysCall @effs @EmulatorMessage Normal e
                 logInfo $ NotificationSuccess n
                 pure Nothing
@@ -171,23 +175,16 @@ runInstance contract event = do
             Just Freeze -> do
                 logInfo Freezing
                 sleep @effs Frozen >>= runInstance contract
-            Just (EndpointCall sender vl) -> do
+            Just (EndpointCall _sender vl) -> do
                 logInfo $ ReceiveEndpointCall vl
                 -- TODO:
                 -- check if the endpoint is active and (maybe - configurable) throw an error if it isn't
                 e <- decodeEvent @s vl
-                response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
+                _response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
                     guard $ handlerName h == eventName e
                     pure e
                 sleep @effs Normal >>= runInstance contract
-            Just (Notify n@Notification{notificationContractEndpoint=EndpointDescription ep, notificationContractArg}) -> do
-                logInfo $ ReceiveNotification n
-                let vl = object ["tag" JSON..= ep, "value" JSON..= EndpointValue notificationContractArg]
-                e <- decodeEvent @s vl
-                response <- respondToRequest @s @e contract $ RequestHandler $ \h -> do
-                    guard $ handlerName h == eventName e
-                    pure e
-                sleep @effs Normal >>= runInstance contract
+                -- TODO: Send response back to sender
             Just (ContractInstanceStateRequest sender) -> do
                 state <- get @(ContractInstanceState s e ())
                 let stateJSON = JSON.toJSON state
@@ -195,7 +192,6 @@ runInstance contract event = do
                 void $ mkSysCall @effs @EmulatorMessage Normal (Message sender $ ContractInstanceStateResponse stateJSON)
                 sleep @effs Normal >>= runInstance contract
             _ -> do
-                -- FIXME: handleSlotNotifications configurable
                 response <- respondToRequest @s @e contract handleBlockchainQueries
                 let prio =
                         maybe

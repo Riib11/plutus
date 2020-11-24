@@ -90,7 +90,7 @@ data EmulatorMessage =
     | NewSlot Slot
     | EndpointCall ThreadId JSON.Value
     -- | EndpointCallResponse
-    | Notify Notification
+    -- | Notify Notification
     | Freeze
     | ContractInstanceStateRequest ThreadId
     | ContractInstanceStateResponse JSON.Value
@@ -164,7 +164,6 @@ data ContractInstanceMsg =
     | StoppedNoError
     | StoppedWithError String
     | ReceiveEndpointCall JSON.Value
-    | ReceiveNotification Notification
     | NoRequestsHandled
     | HandledRequest (Response JSON.Value)
     | CurrentRequests [Request JSON.Value]
@@ -189,8 +188,6 @@ instance Pretty ContractInstanceMsg where
         CurrentRequests lst -> "Current requests" <+> parens (pretty (length lst)) <> colon <+> fillSep (pretty . fmap (take 50 . show . JSON.encode) <$> lst)
         InstErr e -> "Error:" <+> pretty e
         ContractLog v -> "Contract log:" <+> viaShow v
-        ReceiveNotification Notification{notificationContractEndpoint} -> do
-            "Received notification for" <+> viaShow notificationContractEndpoint
         SendingNotification Notification{notificationContractID,notificationContractEndpoint} ->
             "Sending notification" <+> pretty notificationContractEndpoint <+> "to" <+> pretty notificationContractID
         NotificationSuccess Notification{notificationContractID,notificationContractEndpoint} ->
