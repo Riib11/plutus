@@ -50,7 +50,7 @@ module Plutus.Trace.Emulator(
     , Wallet.signingProcess
     -- * Running traces
     , EmulatorConfig(..)
-    , initialDistribution
+    , initialChainState
     , defaultEmulatorConfig
     , runEmulatorStream
     -- * Interpreter
@@ -67,13 +67,14 @@ import           Control.Monad.Freer.Log                 (LogMessage (..), LogMs
 import           Control.Monad.Freer.Reader              (Reader)
 import           Control.Monad.Freer.State               (State, evalState)
 import qualified Data.Map                                as Map
+import           Data.Maybe                              (fromMaybe)
 import           Plutus.Trace.Scheduler                  (SystemCall, ThreadId, runThreads)
 import           Wallet.Emulator.Chain                   (ChainControlEffect, ChainEffect)
 import qualified Wallet.Emulator.Chain                   as ChainState
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
                                                           MultiAgentEffect, schedulerEvent)
 import           Wallet.Emulator.Stream                  (EmulatorConfig (..), EmulatorErr (..), defaultEmulatorConfig,
-                                                          initialDistribution, onInitialThreadStopped, runTraceStream)
+                                                          initialChainState, onInitialThreadStopped, runTraceStream)
 import qualified Wallet.Emulator.Wallet                  as Wallet
 
 import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
@@ -146,7 +147,8 @@ interpretEmulatorTrace conf action =
     -- initial transaction gets validated before the wallets
     -- try to spend their funds
     let action' = Waiting.nextSlot >> action >> Waiting.nextSlot
-        wallets = conf ^. initialDistribution . to Map.keys
+        defaultWallets = Wallet.Wallet <$> [1..10]
+        wallets = fromMaybe defaultWallets (preview (initialChainState . _Left . to Map.keys) conf)
     in
     evalState @EmulatorThreads mempty
         $ handleDeterministicIds

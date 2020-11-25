@@ -50,12 +50,13 @@ module Language.Plutus.Contract.Test(
     , defaultCheckOptions
     , minLogLevel
     , maxSlot
+    , emulatorConfig
     ) where
 
 import           Control.Applicative                             (liftA2)
 import           Control.Foldl                                   (FoldM)
 import qualified Control.Foldl                                   as L
-import           Control.Lens                                    (at, makeLenses, (^.))
+import           Control.Lens                                    (at, makeLenses, to, (^.))
 import           Control.Monad                                   (guard, unless)
 import           Control.Monad.Freer                             (Eff, reinterpret, runM, sendM)
 import           Control.Monad.Freer.Error                       (Error, runError)
@@ -106,7 +107,8 @@ import qualified Streaming                                       as S
 import qualified Streaming.Prelude                               as S
 import           Wallet.Emulator.Folds                           (EmulatorFoldErr, Outcome (..), postMapM)
 import qualified Wallet.Emulator.Folds                           as Folds
-import           Wallet.Emulator.Stream                          (filterLogLevel, foldEmulatorStreamM, takeUntilSlot)
+import           Wallet.Emulator.Stream                          (filterLogLevel, foldEmulatorStreamM,
+                                                                  initialChainState, initialDist, takeUntilSlot)
 
 type TracePredicate = FoldM (Eff '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]) EmulatorEvent Bool
 
@@ -121,8 +123,9 @@ not = fmap Prelude.not
 -- | Options for running the
 data CheckOptions =
     CheckOptions
-        { _minLogLevel :: LogLevel -- ^ Minimum log level for emulator log messages to be included in the test output (printed if the test fails)
-        , _maxSlot     :: Slot -- ^ When to stop the emulator
+        { _minLogLevel    :: LogLevel -- ^ Minimum log level for emulator log messages to be included in the test output (printed if the test fails)
+        , _maxSlot        :: Slot -- ^ When to stop the emulator
+        , _emulatorConfig :: EmulatorConfig
         } deriving (Eq, Show)
 
 makeLenses ''CheckOptions
@@ -132,6 +135,7 @@ defaultCheckOptions =
     CheckOptions
         { _minLogLevel = Info
         , _maxSlot = 125
+        , _emulatorConfig = defaultEmulatorConfig
         }
 
 type TestEffects = '[Reader InitialDistribution, Error EmulatorFoldErr, Writer (Doc Void)]
@@ -151,11 +155,10 @@ checkPredicateOptions ::
     -> TracePredicate -- ^ The predicate to check
     -> EmulatorTrace ()
     -> TestTree
-checkPredicateOptions CheckOptions{_minLogLevel, _maxSlot} nm predicate action = HUnit.testCaseSteps nm $ \step -> do
-    let cfg = defaultEmulatorConfig
-        dist = _initialDistribution cfg
+checkPredicateOptions CheckOptions{_minLogLevel, _maxSlot, _emulatorConfig} nm predicate action = HUnit.testCaseSteps nm $ \step -> do
+    let dist = _emulatorConfig ^. initialChainState . to initialDist
         theStream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
-        theStream = takeUntilSlot _maxSlot $ runEmulatorStream cfg action
+        theStream = takeUntilSlot _maxSlot $ runEmulatorStream _emulatorConfig action
         consumeStream :: forall a. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff TestEffects) a -> Eff TestEffects (S.Of Bool a)
         consumeStream = foldEmulatorStreamM @TestEffects predicate
     result <- runM

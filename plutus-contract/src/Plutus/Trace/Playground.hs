@@ -17,7 +17,7 @@ module Plutus.Trace.Playground(
     , RunContractPlayground.callEndpoint
     -- * Running traces
     , EmulatorConfig(..)
-    , initialDistribution
+    , initialChainState
     , onInitialThreadStopped
     , defaultEmulatorConfig
     , runPlaygroundStream
@@ -39,6 +39,7 @@ import qualified Data.Aeson                                 as JSON
 import           Data.Foldable                              (traverse_)
 import           Data.Map                                   (Map)
 import qualified Data.Map                                   as Map
+import           Data.Maybe                                 (fromMaybe)
 
 import           Language.Plutus.Contract                   (Contract (..), HasBlockchainActions)
 import           Plutus.Trace.Effects.ContractInstanceId    (ContractInstanceIdEff, handleDeterministicIds)
@@ -59,7 +60,7 @@ import           Wallet.Emulator.Chain                      (ChainControlEffect,
 import           Wallet.Emulator.MultiAgent                 (EmulatorEvent, EmulatorEvent' (..), MultiAgentEffect,
                                                              schedulerEvent)
 import           Wallet.Emulator.Stream                     (EmulatorConfig (..), EmulatorErr (..),
-                                                             defaultEmulatorConfig, initialDistribution,
+                                                             defaultEmulatorConfig, initialChainState,
                                                              onInitialThreadStopped, runTraceStream)
 import           Wallet.Emulator.Wallet                     (Wallet (..))
 import           Wallet.Types                               (ContractInstanceId)
@@ -105,7 +106,9 @@ runPlaygroundStream :: forall s e effs a.
     -> Contract s e ()
     -> PlaygroundTrace a
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
-runPlaygroundStream conf contract = runTraceStream conf . interpretPlaygroundTrace (conf ^. onInitialThreadStopped) contract (conf ^. initialDistribution . to Map.keys)
+runPlaygroundStream conf contract =
+    let wallets = fromMaybe (Wallet <$> [1..10]) (preview (initialChainState . _Left . to Map.keys) conf)
+    in runTraceStream conf . interpretPlaygroundTrace (conf ^. onInitialThreadStopped) contract wallets
 
 interpretPlaygroundTrace :: forall s e effs a.
     ( Member MultiAgentEffect effs
