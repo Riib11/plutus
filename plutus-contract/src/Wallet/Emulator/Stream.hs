@@ -35,8 +35,9 @@ import           Control.Monad.Freer.Error              (Error, runError)
 import           Control.Monad.Freer.Extras             (raiseEnd6, wrapError)
 import           Control.Monad.Freer.Log                (LogLevel, LogMessage (..), LogMsg (..), logMessageContent,
                                                          mapMLog)
-import           Control.Monad.Freer.State              (State, evalState, gets)
+import           Control.Monad.Freer.State              (State, gets, runState)
 import           Control.Monad.Freer.Stream             (runStream)
+import           Data.Bifunctor                         (first)
 import           Data.Map                               (Map)
 import qualified Data.Map                               as Map
 import           Data.Maybe                             (fromMaybe)
@@ -79,9 +80,7 @@ foldStreamM :: forall m a b c.
     -> m (S.Of b c)
 foldStreamM theFold = L.impurely S.foldM theFold
 
--- | Consume an emulator event stream. Make sure that the stream terminates
---   (either with 'takeUntilSlot', or by using a short-circuiting effect
---   such as 'Error')
+-- | Consume an emulator event stream.
 foldEmulatorStreamM :: forall effs a b.
     L.FoldM (Eff effs) EmulatorEvent b
     -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a
@@ -89,8 +88,8 @@ foldEmulatorStreamM :: forall effs a b.
 foldEmulatorStreamM theFold =
     foldStreamM (L.premapM (pure . view logMessageContent) theFold)
 
--- | Turn an emulator action into a potentially infinite 'Stream' of emulator
---   log messages.
+-- | Turn an emulator action into a 'Stream' of emulator log messages, returning
+--   the final state of the emulator.
 runTraceStream :: forall effs.
     EmulatorConfig
     -> Eff '[ State EmulatorState
@@ -100,12 +99,12 @@ runTraceStream :: forall effs.
             , ChainControlEffect
             , Error EmulatorRuntimeError
             ] ()
-    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runTraceStream conf =
-    fmap (either Just (const Nothing))
+    fmap (first (either Just (const Nothing)))
     . S.hoist (pure . run)
     . runStream @(LogMessage EmulatorEvent) @_ @'[]
-    . evalState (initialState conf)
+    . runState (initialState conf)
     . interpret handleLogCoroutine
     . reinterpret @_ @(LogMsg EmulatorEvent) (mkTimedLogs @EmulatorEvent')
     . runError

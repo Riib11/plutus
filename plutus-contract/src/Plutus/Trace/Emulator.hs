@@ -126,7 +126,7 @@ handleEmulatorTrace =
 runEmulatorStream :: forall effs a.
     EmulatorConfig
     -> EmulatorTrace a
-    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runEmulatorStream conf = runTraceStream conf . interpretEmulatorTrace conf
 
 -- | Interpret a 'Trace Emulator' action in the multi agent and emulated

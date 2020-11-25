@@ -142,7 +142,7 @@ validateBlock slot@(Slot s) idx txns =
         -- Also return an `EmulatorEvent` for each transaction that was
         -- processed
         nextSlot = Slot (s + 1)
-        events   = (reverse (uncurry mkValidationEvent <$> processed)) ++ [SlotAdd nextSlot]
+        events   = (uncurry mkValidationEvent <$> processed) ++ [SlotAdd nextSlot]
 
     in ValidatedBlock block events rest
 

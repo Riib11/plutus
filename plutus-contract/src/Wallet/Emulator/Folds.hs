@@ -20,6 +20,7 @@ module Wallet.Emulator.Folds (
     , Outcome(..)
     , instanceLog
     -- * Folds for transactions and the UTXO set
+    , chainEvents
     , failedTransactions
     , validatedTransactions
     , utxoAtAddress
@@ -212,16 +213,20 @@ annotatedBlockchain =
     preMapMaybe (preview (eteEvent . chainEvent))
     $ Fold Rollup.handleChainEvent Rollup.initialState Rollup.getAnnotatedTransactions
 
+-- | All chain events emitted by the node
+chainEvents :: EmulatorEventFold [ChainEvent]
+chainEvents = preMapMaybe (preview (eteEvent . chainEvent)) L.list
+
 -- | All transactions that happened during the simulation
 blockchain :: EmulatorEventFold [[Tx]]
 blockchain =
     let step (currentBlock, otherBlocks) = \case
-            SlotAdd _             -> ([], reverse currentBlock : otherBlocks)
+            SlotAdd _             -> ([], currentBlock : otherBlocks)
             TxnValidate txn       -> (txn : currentBlock, otherBlocks)
             TxnValidationFail _ _ -> (currentBlock, otherBlocks)
         initial = ([], [])
         extract (currentBlock, otherBlocks) =
-            reverse ((reverse currentBlock) : otherBlocks)
+            reverse (currentBlock : otherBlocks)
     in preMapMaybe (preview (eteEvent . chainEvent))
         $ Fold step initial extract
 

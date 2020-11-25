@@ -36,6 +36,8 @@ module Language.Plutus.Contract.Test(
     , assertHooks
     , assertResponses
     , assertUserLog
+    , assertBlockchain
+    , assertChainEvents
     , tx
     , anyTx
     , assertEvents
@@ -46,6 +48,9 @@ module Language.Plutus.Contract.Test(
     -- * Checking predicates
     , checkPredicate
     , checkPredicateOptions
+    , checkPredicateGen
+    , checkPredicateGenOptions
+    , checkPredicateInner
     , CheckOptions
     , defaultCheckOptions
     , minLogLevel
@@ -56,14 +61,14 @@ module Language.Plutus.Contract.Test(
 import           Control.Applicative                             (liftA2)
 import           Control.Foldl                                   (FoldM)
 import qualified Control.Foldl                                   as L
-import           Control.Lens                                    (at, makeLenses, to, (^.))
+import           Control.Lens                                    (at, makeLenses, to, (&), (.~), (^.))
 import           Control.Monad                                   (guard, unless)
 import           Control.Monad.Freer                             (Eff, reinterpret, runM, sendM)
 import           Control.Monad.Freer.Error                       (Error, runError)
 import           Control.Monad.Freer.Log                         (LogLevel (..), LogMessage (..))
 import           Control.Monad.Freer.Reader
 import           Control.Monad.Freer.Writer                      (Writer (..), tell)
-import           Data.Foldable                                   (fold, toList)
+import           Data.Foldable                                   (fold, toList, traverse_)
 import           Data.Maybe                                      (mapMaybe)
 import           Data.Proxy                                      (Proxy (..))
 import           Data.Row                                        (Forall, HasType)
@@ -73,16 +78,12 @@ import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Render.Text           (renderStrict)
 import           Data.Void
 import           GHC.TypeLits                                    (KnownSymbol, Symbol, symbolVal)
-import           Ledger.Tx                                       (Tx)
+
+
+import           Hedgehog                                        (Property, forAll, property)
+import qualified Hedgehog
 import qualified Test.Tasty.HUnit                                as HUnit
 import           Test.Tasty.Providers                            (TestTree)
-
-import qualified Language.PlutusTx.Prelude                       as P
-
-import           Language.Plutus.Contract.Resumable              (Request (..), Response (..))
-import qualified Language.Plutus.Contract.Resumable              as State
-import           Language.Plutus.Contract.Types                  (Contract (..))
-import           Ledger.Constraints.OffChain                     (UnbalancedTx)
 
 import           Language.Plutus.Contract.Effects.AwaitSlot      (SlotSymbol)
 import qualified Language.Plutus.Contract.Effects.AwaitSlot      as AwaitSlot
@@ -90,8 +91,16 @@ import qualified Language.Plutus.Contract.Effects.ExposeEndpoint as Endpoints
 import qualified Language.Plutus.Contract.Effects.UtxoAt         as UtxoAt
 import qualified Language.Plutus.Contract.Effects.WatchAddress   as WatchAddress
 import           Language.Plutus.Contract.Effects.WriteTx        (HasWriteTx)
+import           Language.Plutus.Contract.Resumable              (Request (..), Response (..))
+import qualified Language.Plutus.Contract.Resumable              as State
+import           Language.Plutus.Contract.Types                  (Contract (..))
+import qualified Language.PlutusTx.Prelude                       as P
+import           Ledger.Constraints.OffChain                     (UnbalancedTx)
+import           Ledger.Tx                                       (Tx)
 
 import           Ledger.Address                                  (Address)
+import           Ledger.Generators                               (GeneratorModel, Mockchain (..))
+import qualified Ledger.Generators                               as Gen
 import           Ledger.Index                                    (ValidationError)
 import           Ledger.Slot                                     (Slot)
 import           Ledger.Value                                    (Value)
@@ -105,6 +114,7 @@ import           Plutus.Trace.Emulator.Types                     (ContractConstr
                                                                   ContractInstanceTag, UserThreadMsg)
 import qualified Streaming                                       as S
 import qualified Streaming.Prelude                               as S
+import           Wallet.Emulator.Chain                           (ChainEvent)
 import           Wallet.Emulator.Folds                           (EmulatorFoldErr, Outcome (..), postMapM)
 import qualified Wallet.Emulator.Folds                           as Folds
 import           Wallet.Emulator.Stream                          (filterLogLevel, foldEmulatorStreamM,
@@ -148,29 +158,41 @@ checkPredicate ::
     -> TestTree
 checkPredicate = checkPredicateOptions defaultCheckOptions
 
--- | A version of 'checkPredicate' with configurable 'CheckOptions'
-checkPredicateOptions ::
-    CheckOptions -- ^ Options to use
-    -> String -- ^ Descriptive name of the test
-    -> TracePredicate -- ^ The predicate to check
+-- | Check if the emulator trace meets the condition, using the
+--   'GeneratorModel' to generate initial transactions for the blockchain
+checkPredicateGen ::
+    GeneratorModel
+    -> TracePredicate
     -> EmulatorTrace ()
-    -> TestTree
-checkPredicateOptions CheckOptions{_minLogLevel, _maxSlot, _emulatorConfig} nm predicate action = HUnit.testCaseSteps nm $ \step -> do
+    -> Property
+checkPredicateGen = checkPredicateGenOptions defaultCheckOptions
+
+-- | Evaluate a trace predicate on an emulator trace, printing out debug information
+--   and making assertions as we go.
+checkPredicateInner :: forall m.
+    Monad m
+    => CheckOptions
+    -> TracePredicate
+    -> EmulatorTrace ()
+    -> (String -> m ()) -- ^ Print out debug information in case of test failures
+    -> (Bool -> m ()) -- ^ assert
+    -> m ()
+checkPredicateInner CheckOptions{_minLogLevel, _maxSlot, _emulatorConfig} predicate action annot assert = do
     let dist = _emulatorConfig ^. initialChainState . to initialDist
         theStream :: forall effs. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
         theStream = takeUntilSlot _maxSlot $ runEmulatorStream _emulatorConfig action
         consumeStream :: forall a. S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff TestEffects) a -> Eff TestEffects (S.Of Bool a)
         consumeStream = foldEmulatorStreamM @TestEffects predicate
     result <- runM
-                $ reinterpret @(Writer (Doc Void)) @IO  (\case { Tell d -> sendM $ step $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
+                $ reinterpret @(Writer (Doc Void)) @m  (\case { Tell d -> sendM $ annot $ Text.unpack $ renderStrict $ layoutPretty defaultLayoutOptions d })
                 $ runError
                 $ runReader dist
                 $ consumeStream theStream
 
     unless (fmap S.fst' result == Right True) $ do
-        step "Test failed."
-        step "Emulator log:"
-        S.mapM_ step
+        annot "Test failed."
+        annot "Emulator log:"
+        S.mapM_ annot
             $ S.hoist runM
             $ S.map (Text.unpack . renderStrict . layoutPretty defaultLayoutOptions . pretty)
             $ filterLogLevel _minLogLevel
@@ -178,10 +200,33 @@ checkPredicateOptions CheckOptions{_minLogLevel, _maxSlot, _emulatorConfig} nm p
 
         case result of
             Left err -> do
-                step "Error:"
-                step (show err)
-                HUnit.assertBool nm False
-            Right _ -> HUnit.assertBool nm False
+                annot "Error:"
+                annot (show err)
+                assert False
+            Right _ -> assert False
+
+-- | A version of 'checkPredicateGen' with configurable 'CheckOptions'
+checkPredicateGenOptions ::
+    CheckOptions
+    -> GeneratorModel
+    -> TracePredicate
+    -> EmulatorTrace ()
+    -> Property
+checkPredicateGenOptions options gm predicate action = property $ do
+    Mockchain{mockchainInitialBlock} <- forAll (Gen.genMockchain' gm)
+    let options' = options & emulatorConfig . initialChainState .~ Right mockchainInitialBlock
+    checkPredicateInner options' predicate action Hedgehog.annotate Hedgehog.assert
+
+-- | A version of 'checkPredicate' with configurable 'CheckOptions'
+checkPredicateOptions ::
+    CheckOptions -- ^ Options to use
+    -> String -- ^ Descriptive name of the test
+    -> TracePredicate -- ^ The predicate to check
+    -> EmulatorTrace ()
+    -> TestTree
+checkPredicateOptions options nm predicate action = do
+    HUnit.testCaseSteps nm $ \step -> do
+        checkPredicateInner options predicate action step (HUnit.assertBool nm)
 
 endpointAvailable
     :: forall (l :: Symbol) s e a.
@@ -434,14 +479,33 @@ assertOutcome contract inst p nm =
 walletFundsChange :: Wallet -> Value -> TracePredicate
 walletFundsChange w dlt =
     flip postMapM (L.generalize $ Folds.walletFunds w) $ \finalValue -> do
-        initialDist <- ask @InitialDistribution
-        let initialValue = fold (initialDist ^. at w)
+        dist <- ask @InitialDistribution
+        let initialValue = fold (dist ^. at w)
             result = initialValue P.+ dlt == finalValue
         unless result $ do
             tell @(Doc Void) $ vsep
                 [ "Expected funds of" <+> pretty w <+> "to change by" <+> viaShow dlt
                 , "but they changed by", viaShow (finalValue P.- initialValue)]
         pure result
+
+-- | An assertion about the blockchain
+assertBlockchain :: ([[Tx]] -> Bool) -> TracePredicate
+assertBlockchain predicate =
+    flip postMapM (L.generalize Folds.blockchain) $ \chain -> do
+        let passing = predicate chain
+        unless passing $ do
+            tell @(Doc Void) $ "Blockchain does not match predicate."
+        pure passing
+
+-- | An assertion about the chain events
+assertChainEvents :: ([ChainEvent] -> Bool) -> TracePredicate
+assertChainEvents predicate =
+    flip postMapM (L.generalize Folds.chainEvents) $ \evts -> do
+        let passing = predicate evts
+        unless passing $ do
+            tell @(Doc Void) $ "Chain events do not match predicate."
+            traverse_ (tell @(Doc Void) . pretty) evts
+        pure passing
 
 -- | Assert that at least one transaction failed to validate, and that all
 --   transactions that failed meet the predicate.

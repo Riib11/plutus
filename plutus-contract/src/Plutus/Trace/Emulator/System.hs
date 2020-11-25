@@ -20,15 +20,16 @@ import           Control.Monad                 (forM_, void)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Coroutine
 import           Data.Foldable                 (traverse_)
+import           Wallet.Effects                (startWatching)
 import           Wallet.Emulator.Chain         (ChainControlEffect, ChainEffect, getCurrentSlot, processBlock)
-import           Wallet.Emulator.MultiAgent    (MultiAgentEffect, walletControlAction)
+import           Wallet.Emulator.MultiAgent    (MultiAgentEffect, walletAction, walletControlAction)
 
 import           Data.String                   (IsString (..))
 import           Plutus.Trace.Emulator.Types   (EmulatorMessage (..))
 import           Plutus.Trace.Scheduler        (Priority (..), SysCall (..), SystemCall, Tag, fork, mkSysCall, sleep)
 import           Wallet.Emulator.ChainIndex    (chainIndexNotify)
 import           Wallet.Emulator.NodeClient    (ChainClientNotification (..), clientNotify)
-import           Wallet.Emulator.Wallet        (Wallet (..))
+import           Wallet.Emulator.Wallet        (Wallet (..), walletAddress)
 
 {- Note [Simulator Time]
 
@@ -106,7 +107,7 @@ agentThread :: forall effs effs2.
     )
     => Wallet
     -> Eff effs2 ()
-agentThread wllt = go where
+agentThread wllt = walletAction wllt (startWatching $ walletAddress wllt) >> go where
     go = do
         e <- sleep @effs @EmulatorMessage Sleeping
         let noti = e >>= \case

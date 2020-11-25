@@ -57,8 +57,8 @@ import           Plutus.Trace.Scheduler                     (OnInitialThreadStop
 import           Streaming                                  (Stream)
 import           Streaming.Prelude                          (Of)
 import           Wallet.Emulator.Chain                      (ChainControlEffect, ChainEffect)
-import           Wallet.Emulator.MultiAgent                 (EmulatorEvent, EmulatorEvent' (..), MultiAgentEffect,
-                                                             schedulerEvent)
+import           Wallet.Emulator.MultiAgent                 (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
+                                                             MultiAgentEffect, schedulerEvent)
 import           Wallet.Emulator.Stream                     (EmulatorConfig (..), EmulatorErr (..),
                                                              defaultEmulatorConfig, initialChainState,
                                                              onInitialThreadStopped, runTraceStream)
@@ -105,7 +105,7 @@ runPlaygroundStream :: forall s e effs a.
     => EmulatorConfig
     -> Contract s e ()
     -> PlaygroundTrace a
-    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr)
+    -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runPlaygroundStream conf contract =
     let wallets = fromMaybe (Wallet <$> [1..10]) (preview (initialChainState . _Left . to Map.keys) conf)
     in runTraceStream conf . interpretPlaygroundTrace (conf ^. onInitialThreadStopped) contract wallets
