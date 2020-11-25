@@ -40,6 +40,24 @@ import           Wallet.Emulator.Wallet                 (SigningProcess, Wallet,
 import qualified Wallet.Emulator.Wallet                 as W
 import           Wallet.Types                           (ContractInstanceId)
 
+{- Note [The EmulatorControl effect]
+
+The 'EmulatorControl' effect bundles all trace actions that deal with the
+internals of the Plutus emulator, such as messing with the clock and dis-
+connecting agents from the network.
+
+All other effects defined under @Plutus.Trace.Effects@ can, in theory, be run
+against a live system, ie. one running in real time with a real Goguen node and
+wallet(s).
+
+This means that if you write traces in a way that doesn't require the
+'Member EmulatorControl' constraint, then it is likely that your traces will
+work on a live system just as they do on the emulator. (We haven't implemented
+the effect handlers for "live mode" yet, so it is still possible that there
+are some modifications to be made)
+
+-}
+
 data EmulatorControl r where
     SetSigningProcess :: Wallet -> SigningProcess -> EmulatorControl ()
     AgentState :: Wallet -> EmulatorControl WalletState

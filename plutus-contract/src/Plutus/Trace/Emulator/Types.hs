@@ -87,12 +87,12 @@ type ContractConstraints s =
 
 -- | Messages sent to, and received by, threads in the emulator.
 data EmulatorMessage =
-    BlockAdded [Tx]
-    | NewSlot Slot
-    | EndpointCall ThreadId EndpointDescription JSON.Value
-    | Freeze
-    | ContractInstanceStateRequest ThreadId
-    | ContractInstanceStateResponse JSON.Value
+    BlockAdded [Tx] -- ^ A new block was validated
+    | NewSlot Slot -- ^ A new slot has begun
+    | EndpointCall ThreadId EndpointDescription JSON.Value -- ^ Call to an endpoint
+    | Freeze -- ^ Tell the contract instance to freeze itself (see note [Freeze and Thaw])
+    | ContractInstanceStateRequest ThreadId -- ^ Request for the current state of a contract instance
+    | ContractInstanceStateResponse JSON.Value -- ^ Response to a contract instance state request
     deriving stock (Eq, Show)
 
 -- | A map of contract instance ID to thread ID
@@ -158,6 +158,7 @@ instance Pretty UserThreadMsg where
         UserLog str     -> pretty str
         UserThreadErr e -> "Error:" <+> pretty e
 
+-- | Log messages produced by contract instances
 data ContractInstanceMsg =
     Started
     | StoppedNoError

@@ -65,6 +65,27 @@ import           Wallet.Emulator.Stream                     (EmulatorConfig (..)
 import           Wallet.Emulator.Wallet                     (Wallet (..))
 import           Wallet.Types                               (ContractInstanceId)
 
+{- Note [Playground traces]
+
+The list of effects we can use in traces for the Plutus playground is slightly
+different from that for regular traces:
+
+* There is only a single contract
+* We don't need to start contract instances manually (see note
+  [Wallet contract instances])
+* We have fewer actions. Only "call endpoint" and "wait" are supported in the
+  UI.
+
+Therefore we can get by with a smaller list of effects for the 'PlaygroundTrace'
+type.
+
+Of particular note is the absence of
+'Plutus.Trace.Effects.EmulatorControl.EmulatorControl'. This means that we can,
+theoretically, run playground traces not just against the simulated environment
+but also against a live system. See note [The EmulatorControl effect]
+
+-}
+
 type PlaygroundTrace a =
     Eff
         '[ RunContractPlayground

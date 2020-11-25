@@ -5,7 +5,11 @@
 {-# LANGUAGE MonoLocalBinds     #-}
 {-# LANGUAGE RankNTypes         #-}
 {-# LANGUAGE TypeApplications   #-}
-{- This module provides a list of folds over the emulator event stream.
+{-
+This module provides a list of folds over the emulator event stream. To apply
+the folds in this module to a stream of events, use
+'Wallet.Emulator.Stream.foldEmulatorStreamM'. See note [Emulator event stream].
+
 -}
 module Wallet.Emulator.Folds (
     EmulatorEventFold

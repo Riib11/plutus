@@ -9,7 +9,7 @@
 {-
 
 Defines the system threads. One thread for each simulated agent, and a block
-maker threat for the blockchain / network.
+maker thread for the blockchain / network.
 
 -}
 module Plutus.Trace.Emulator.System(

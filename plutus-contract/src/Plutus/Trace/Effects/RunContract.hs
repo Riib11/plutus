@@ -77,8 +77,9 @@ type ContractConstraints s =
     , V.Forall (Output s) JSON.ToJSON
     )
 
--- | The 'ContractInstanceTag' for the contract instance of a wallet. See note
---   [Wallet contract instances]
+-- | The 'ContractInstanceTag' for the contract instance of a wallet. Useful if
+--   there is only a single contract instance for this wallet.
+--   See note [Wallet contract instances]
 walletInstanceTag :: Wallet -> ContractInstanceTag
 walletInstanceTag (Wallet i) = fromString $ "Contract instance for wallet " <> show i
 

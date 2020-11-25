@@ -13,7 +13,11 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
+{-
 
+The scheduler thread that runs a contract instance.
+
+-}
 module Plutus.Trace.Emulator.ContractInstance(
     contractThread
     , getThread
@@ -104,6 +108,8 @@ handleContractRuntime = interpret $ \case
                 logInfo $ NotificationSuccess n
                 pure Nothing
 
+-- | Start a new thread for a contract. Most of the work happens in
+--   'runInstance'.
 contractThread :: forall s e effs.
     ( Member (State EmulatorThreads) effs
     , Member MultiAgentEffect effs
@@ -176,6 +182,7 @@ runInstance contract event = do
         case event of
             Just Freeze -> do
                 logInfo Freezing
+                -- freeze ourselves, see note [Freeze and Thaw]
                 sleep @effs Frozen >>= runInstance contract
             Just (EndpointCall sender desc vl) -> do
                 logInfo $ ReceiveEndpointCall vl

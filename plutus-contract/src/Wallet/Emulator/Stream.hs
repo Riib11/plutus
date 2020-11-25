@@ -63,6 +63,22 @@ import           Language.Plutus.Contract.Trace         (InitialDistribution, de
 import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
 import           Plutus.Trace.Scheduler                 (OnInitialThreadStopped (Stop))
 
+{- Note [Emulator event stream]
+
+The primary way of observing the outcome of a trace is by looking at the
+stream of events it produces, via 'runTraceStream'. This has the following
+reasons:
+
+* A totally ordered stream of events is a good way to characterise the
+  behaviour of a dynamic system.
+* By taking the stream of events as the main output of running a trace, we
+  can potentially run the trace against a live system. (To really do that we'll have to change the type of log messages - 'EmulatorEvent' contains some events only make sense in the emulator. But the underlying mechanism of how the stream is produces is still the same.) See note [The Emulator Control effect]
+* We have the potential of saving some work because the stream is produced
+  on-demand. This also makes it possible to deal with infinite traces: We just
+  evaluate them to a finite number of steps.
+
+-}
+
 -- | Finish the stream at the end of the given slot.
 takeUntilSlot :: forall effs a. Slot -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) a -> S.Stream (S.Of (LogMessage EmulatorEvent)) (Eff effs) ()
 takeUntilSlot maxSlot = S.takeWhile (maybe True (\sl -> sl <= maxSlot) . preview (logMessageContent . eteEvent . chainEvent . _SlotAdd))
