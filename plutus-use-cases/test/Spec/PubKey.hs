@@ -38,7 +38,6 @@ theContract = do
 tests :: TestTree
 tests = testGroup "pubkey"
   [ checkPredicate "works like a public key output"
-      -- theContract
       (walletFundsChange w1 mempty .&&. assertDone theContract (Trace.walletInstanceTag w1) (const True) "pubkey contract not done")
       $ do
         _ <- Trace.activateContractWallet w1 theContract

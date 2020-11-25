@@ -132,22 +132,13 @@ selectCoinProp = property $ do
         Right (ins, change) ->
             Hedgehog.assert $ (foldMap snd ins) == (target P.+ change)
 
--- | Submit a transaction to the blockchain and assert that it has been
---   validated
-simpleTrace :: Tx -> Eff.Eff EmulatorEffs ()
-simpleTrace txn = do
-    undefined
-    -- txn' <- walletAction wallet1 $ signTxAndSubmit txn
-    -- block <- processPending
-    -- assertIsValidated txn'
-
 txnUpdateUtxo :: Property
 txnUpdateUtxo = property $ do
     (Mockchain m _, txn) <- forAll genChainTxn
     let options = defaultCheckOptions & emulatorConfig . Trace.initialChainState .~ Right m
 
-        -- submit the same txn twice, so it should be accepted the first time and
-        -- rejected the second time.
+        -- submit the same txn twice, so it should be accepted the first time
+        -- and rejected the second time.
         trace = do
             Trace.liftWallet wallet1 (submitTxn txn)
             Trace.liftWallet wallet1 (submitTxn txn)
