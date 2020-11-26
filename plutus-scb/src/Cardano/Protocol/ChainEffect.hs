@@ -10,7 +10,6 @@ import           Control.Monad.Freer
 import           Control.Monad.Freer.Log
 import           Control.Monad.Freer.Reader
 import           Control.Monad.Freer.State
-import           Control.Monad.Freer.Writer
 import           Control.Monad.IO.Class
 
 import qualified Cardano.Protocol.Socket.Client as Client

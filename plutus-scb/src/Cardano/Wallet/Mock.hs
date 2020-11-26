@@ -29,7 +29,7 @@ import           Test.QuickCheck                (arbitrary, generate)
 import           Wallet.API                     (WalletAPIError (InsufficientFunds, OtherError, PrivateKeyNotFound))
 import           Wallet.Effects                 (ChainIndexEffect)
 import qualified Wallet.Effects                 as W
-import           Wallet.Emulator.Wallet         (Wallet (Wallet), WalletState (..))
+import           Wallet.Emulator.Wallet         (Wallet (Wallet))
 import qualified Wallet.Emulator.Wallet         as EM
 
 data MockWalletMsg =

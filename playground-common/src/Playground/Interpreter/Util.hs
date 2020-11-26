@@ -103,12 +103,12 @@ stage contract programJson simulatorWalletsJson = do
         playgroundDecode "[Expression schema]" . BSL.pack $ simulationJson
     simulatorWallets :: [SimulatorWallet] <-
         playgroundDecode "[SimulatorWallet]" simulatorWalletsJson
-    let config = EmulatorConfig (toInitialDistribution simulatorWallets) KeepGoing
+    let config = EmulatorConfig (Left $ toInitialDistribution simulatorWallets) KeepGoing
         allWallets = simulatorWalletWallet <$> simulatorWallets
         final = run
             $ runError
             $ foldEmulatorStreamM @'[Error PlaygroundError] (evaluationResultFold allWallets)
-            $ takeUntilSlot 20 -- FIXME: Max slot
+            $ takeUntilSlot 20
             $ runPlaygroundStream config (void contract) (traverse_ expressionToTrace simulation)
 
     case final of

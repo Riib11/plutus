@@ -71,9 +71,9 @@ Slot 1: W4: Balancing an unbalanced transaction:
                     "u\210d\223\143Krhd8x<\133$g=*Z\233\172\SIw\STX!7\165\145\154\&7d]W"}
               Requires signatures:
 Slot 1: W4: TxSubmit: d11b05266b194b37628b3ca82e39ae88a6b7ba40f76aeb3ddfb5ec3be0a25f32
-Slot 2: TxnValidate b70e442d64c9dfa328a2877046eccb77005a2d623e31f28296733e5e3888eeb9
-Slot 2: TxnValidate a12b334339fd2415364ff8d1b1c1b85e8011b8573f09c438dab61f22db1b1ca2
 Slot 2: TxnValidate d11b05266b194b37628b3ca82e39ae88a6b7ba40f76aeb3ddfb5ec3be0a25f32
+Slot 2: TxnValidate a12b334339fd2415364ff8d1b1c1b85e8011b8573f09c438dab61f22db1b1ca2
+Slot 2: TxnValidate b70e442d64c9dfa328a2877046eccb77005a2d623e31f28296733e5e3888eeb9
 Slot 20: 00000000-0000-0000-0000-000000000000 {Contract instance for wallet 1}:
            Contract log: String "Collecting funds"
 Slot 20: W1: Balancing an unbalanced transaction:

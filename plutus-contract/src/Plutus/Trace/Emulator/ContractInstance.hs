@@ -184,14 +184,10 @@ runInstance contract event = do
                 logInfo Freezing
                 -- freeze ourselves, see note [Freeze and Thaw]
                 sleep @effs Frozen >>= runInstance contract
-            Just (EndpointCall sender desc vl) -> do
+            Just (EndpointCall _ _ vl) -> do
                 logInfo $ ReceiveEndpointCall vl
                 e <- decodeEvent @s vl
-                response <- respondToEvent @s @e contract e
-                ownId <- ask @ContractInstanceId
-                let rspMsg = case response of
-                        Nothing -> Just $ EndpointNotAvailable ownId desc
-                        Just _  -> Nothing
+                _ <- respondToEvent @s @e contract e
                 sleep @effs Normal >>= runInstance contract
             Just (ContractInstanceStateRequest sender) -> do
                 state <- get @(ContractInstanceState s e ())
