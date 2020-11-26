@@ -106,7 +106,6 @@
           "Language/Plutus/Contract/Typed/Tx"
           "Wallet/Emulator"
           "Wallet/Emulator/Types"
-          "Wallet/Emulator/Generators"
           "Wallet/Emulator/Chain"
           "Wallet/Emulator/ChainIndex"
           "Wallet/Emulator/ChainIndex/Index"
