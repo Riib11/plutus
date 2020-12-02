@@ -29,7 +29,6 @@ rec {
   inherit pkgs plutus plutusMusl;
 
   inherit (plutus) web-ghc;
-  inherit (plutus.lib) buildNodeModules;
 
   inherit (haskell.packages.plutus-scb.components.exes)
     plutus-game
@@ -37,14 +36,14 @@ rec {
     plutus-atomic-swap
     plutus-pay-to-wallet;
 
-  webCommon = pkgs.callPackage ./web-common { };
+  webCommon = pkgs.callPackage ./web-common { inherit (plutus.lib) gitignore-nix; };
 
   plutus-playground = pkgs.recurseIntoAttrs rec {
     tutorial = docs.site;
     haddock = plutus.plutus-haddock-combined;
 
     inherit (pkgs.callPackage ./plutus-playground-client {
-      inherit (plutus.lib) buildPursPackage buildNodeModules;
+      inherit (plutus.lib) buildPursPackage buildNodeModules gitignore-nix;
       inherit set-git-rev haskell webCommon;
     }) client server-invoker generated-purescript;
   };
@@ -53,7 +52,7 @@ rec {
     tutorial = docs.marlowe-tutorial;
 
     inherit (pkgs.callPackage ./marlowe-playground-client {
-      inherit (plutus.lib) buildPursPackage buildNodeModules;
+      inherit (plutus.lib) buildPursPackage buildNodeModules gitignore-nix;
       inherit set-git-rev haskell webCommon;
     }) client server-invoker generated-purescript;
   };
@@ -71,7 +70,7 @@ rec {
   };
 
   plutus-scb = pkgs.callPackage ./plutus-scb-client {
-    inherit (plutus.lib) buildPursPackage buildNodeModules;
+    inherit (plutus.lib) buildPursPackage buildNodeModules gitignore-nix;
     inherit set-git-rev haskell webCommon;
   };
 

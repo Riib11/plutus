@@ -1,7 +1,7 @@
 { stdenv
 , nodejs
 , easyPS
-, nix-gitignore
+, gitignore-nix
 }:
 
 {
@@ -21,8 +21,8 @@
 , nodeModules
 }:
 let
-  # Cleans the source based on the patterns in ./.gitignore and the additionalIgnores
-  cleanSrcs = nix-gitignore.gitignoreSource [ "/*.adoc" "/*.nix" ] src;
+  # Cleans the source based on the patterns in gitignore files
+  cleanSrcs = gitignore-nix.gitignoreSource src;
 
 in
 stdenv.mkDerivation {

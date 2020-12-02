@@ -12,6 +12,19 @@
         "url": "https://github.com/justinwoo/easy-purescript-nix/archive/7b1c1635e16c7f12065db2f8ec049030fcc63655.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "gitignore.nix": {
+        "branch": "master",
+        "builtin": false,
+        "description": "Nix function for filtering local git sources",
+        "homepage": "",
+        "owner": "hercules-ci",
+        "repo": "gitignore.nix",
+        "rev": "c4662e662462e7bf3c2a968483478a665d00e717",
+        "sha256": "1npnx0h6bd0d7ql93ka7azhj40zgjp815fw2r6smg8ch9p7mzdlx",
+        "type": "tarball",
+        "url": "https://github.com/hercules-ci/gitignore.nix/archive/c4662e662462e7bf3c2a968483478a665d00e717.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "hackage.nix": {
         "branch": "master",
         "description": "Automatically generated Nix expressions for Hackage",
@@ -59,19 +72,6 @@
         "sha256": "1xf2i5cjpgsw42631mp9n20nj1rvw2swyhlqjxyrwydvk6vlf22p",
         "type": "tarball",
         "url": "https://github.com/fzakaria/mvn2nix/archive/a4c9ec1cd6118e22a6a5e5fc04c30c406d0d80ea.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "nix-gitignore": {
-        "branch": "master",
-        "builtin": false,
-        "description": "A nix expression that filters source based on a .gitignore file.",
-        "homepage": "",
-        "owner": "siers",
-        "repo": "nix-gitignore",
-        "rev": "a9609739209cef90e2e8eaa0b5b656721d3da63e",
-        "sha256": "1h7dgiy0kiyzsv0s2w5p6z5103k4s8wc6i793cwq1srk2kwdsrxm",
-        "type": "tarball",
-        "url": "https://github.com/siers/nix-gitignore/archive/a9609739209cef90e2e8eaa0b5b656721d3da63e.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs": {
