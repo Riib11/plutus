@@ -69,7 +69,7 @@ import Servant.PureScript.Ajax (errorToString)
 import Servant.PureScript.Settings (SPSettings_, defaultSettings)
 import StaticData (mkContractDemos)
 import StaticData as StaticData
-import Types (ChildSlots, DragAndDropEventType(..), HAction(..), Query, State(..), View(..), WalletEvent(..), WebData, _actionDrag, _authStatus, _blockchainVisualisationState, _compilationResult, _contractDemos, _createGistResult, _currentView, _demoFilesMenuOpen, _editorState, _evaluationResult, _functionSchema, _gistUrl, _knownCurrencies, _result, _resultRollup, _simulationActions, _simulationWallets, _simulations, _simulatorWalletBalance, _simulatorWalletWallet, _successfulCompilationResult, _walletId, getKnownCurrencies, toEvaluation)
+import Types (ChildSlots, DragAndDropEventType(..), HAction(..), Query, State(..), View(..), WalletEvent(..), WebData, _actionDrag, _authStatus, _blockchainVisualisationState, _compilationResult, _contractDemos, _createGistResult, _currentView, _demoFilesMenuOpen, _editorState, _evaluationResult, _functionSchema, _gistUrl, _lastCompiledCode, _lastEvaluatedSimulation, _knownCurrencies, _result, _resultRollup, _simulationActions, _simulationWallets, _simulations, _simulatorWalletBalance, _simulatorWalletWallet, _successfulCompilationResult, _walletId, getKnownCurrencies, toEvaluation)
 import Validation (_argumentValues, _argument)
 import ValueEditor (ValueEvent(..))
 import View as View
@@ -101,9 +101,11 @@ mkInitialState editorState = do
         , editorState
         , contractDemos
         , compilationResult: NotAsked
+        , lastCompiledCode: Nothing
         , simulations: Cursor.empty
         , actionDrag: Nothing
         , evaluationResult: NotAsked
+        , lastEvaluatedSimulation: Nothing
         , authStatus: NotAsked
         , createGistResult: NotAsked
         , gistUrl: Nothing
@@ -285,18 +287,20 @@ handleAction EvaluateActions =
   void
     $ runMaybeT
     $ do
+        simulation <- peruse (_simulations <<< _current)
         evaluation <-
           MaybeT do
             contents <- editorGetContents
-            simulation <- peruse (_simulations <<< _current)
             pure $ join $ toEvaluation <$> contents <*> simulation
         assign _evaluationResult Loading
         result <- lift $ postEvaluation evaluation
         assign _evaluationResult result
-        -- If we got a successful result, switch tab.
+        -- If we got a successful result, update last evaluated simulation and switch tab.
         case result of
           Success (Left _) -> pure unit
-          _ -> replaceViewOnSuccess result Simulations Transactions
+          _ -> do
+            updateSimulationOnSuccess result simulation
+            replaceViewOnSuccess result Simulations Transactions
         pure unit
 
 handleAction (LoadScript key) = do
@@ -487,6 +491,16 @@ handleActionWalletEvent _ (ModifyBalance walletIndex action) wallets =
     (ix walletIndex <<< _simulatorWalletBalance)
     (Schema.handleValueEvent action)
     wallets
+
+updateSimulationOnSuccess :: forall m e a. MonadState State m => RemoteData e a -> Maybe Simulation -> m Unit
+updateSimulationOnSuccess result simulation = do
+  when (isSuccess result)
+    (assign _lastEvaluatedSimulation simulation)
+
+updateCodeOnSuccess :: forall m e a. MonadState State m => RemoteData e a -> Maybe SourceCode -> m Unit
+updateCodeOnSuccess result code = do
+  when (isSuccess result)
+    (assign _lastCompiledCode code)
 
 replaceViewOnSuccess :: forall m e a. MonadState State m => RemoteData e a -> View -> View -> m Unit
 replaceViewOnSuccess result source target = do
