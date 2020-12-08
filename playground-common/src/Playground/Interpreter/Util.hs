@@ -32,16 +32,18 @@ import           Language.Plutus.Contract.Effects.ExposeEndpoint (EndpointDescri
 import           Ledger.Crypto                                   (pubKeyHash)
 import           Ledger.Value                                    (Value)
 import           Playground.Types                                (ContractCall (AddBlocks, AddBlocksUntil, CallEndpoint, PayToWallet),
-                                                                  EvaluationResult (..), Expression,
+                                                                  EvaluationResult, Expression,
                                                                   FunctionSchema (FunctionSchema),
                                                                   PlaygroundError (JsonDecodingError, OtherError),
                                                                   SimulatorWallet (SimulatorWallet), amount, argument,
                                                                   argumentValues, caller, decodingError,
                                                                   endpointDescription, expected, input, recipient,
                                                                   sender, simulatorWalletWallet)
+import qualified Playground.Types
 import           Plutus.Trace                                    (ContractConstraints, ContractInstanceTag)
-import           Plutus.Trace.Playground                         (EmulatorConfig (..), PlaygroundTrace,
-                                                                  runPlaygroundStream, walletInstanceTag)
+import           Plutus.Trace.Playground                         (PlaygroundTrace, runPlaygroundStream,
+                                                                  walletInstanceTag)
+import qualified Plutus.Trace.Playground
 import qualified Plutus.Trace.Playground                         as Trace
 import           Plutus.Trace.Scheduler                          (OnInitialThreadStopped (KeepGoing))
 import           Streaming.Prelude                               (fst')
@@ -79,7 +81,7 @@ renderInstanceTrace =
 evaluationResultFold :: [Wallet] -> EmulatorEventFoldM effs EvaluationResult
 evaluationResultFold wallets =
     let pkh wallet = (pubKeyHash (walletPubKey wallet), wallet)
-    in EvaluationResult
+    in Playground.Types.EvaluationResult
             <$> L.generalize Folds.blockchain
             <*> L.generalize Folds.annotatedBlockchain
             <*> L.generalize Folds.emulatorLog
@@ -103,7 +105,7 @@ stage contract programJson simulatorWalletsJson = do
         playgroundDecode "[Expression schema]" . BSL.pack $ simulationJson
     simulatorWallets :: [SimulatorWallet] <-
         playgroundDecode "[SimulatorWallet]" simulatorWalletsJson
-    let config = EmulatorConfig (Left $ toInitialDistribution simulatorWallets) KeepGoing
+    let config = Plutus.Trace.Playground.EmulatorConfig (Left $ toInitialDistribution simulatorWallets) KeepGoing
         allWallets = simulatorWalletWallet <$> simulatorWallets
         final = run
             $ runError
