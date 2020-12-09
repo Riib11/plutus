@@ -274,6 +274,13 @@ emitRuntimeError codeTy e = do
 -- and return a core expression which evaluates to the compiled plc AST as a serialized bytestring,
 -- to be injected back to the Haskell program.
 compileMarkedExpr :: String -> GHC.Type -> GHC.CoreExpr -> PluginM PLC.DefaultUni PLC.DefaultFun GHC.CoreExpr
+-- FIXME: ONLY FOR DEBUGGING
+compileMarkedExpr _ _ (GHC.Var n) = do
+    lookupFn <- asks pcLookup
+    mcorebind <- liftIO $ lookupFn (GHC.varName n)
+    case mcorebind of
+        Just _b -> throwError . NoContext $ InvalidMarkerError "found"
+        Nothing -> throwError . NoContext $ InvalidMarkerError "notfound"
 compileMarkedExpr locStr codeTy origE = do
     flags <- GHC.getDynFlags
     famEnvs <- asks pcFamEnvs

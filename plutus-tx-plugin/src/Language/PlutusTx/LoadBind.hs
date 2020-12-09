@@ -93,7 +93,7 @@ contains, if the field exists.
 loadCoreBindings :: ModIface -> IfL (Maybe [Bind CoreBndr])
 loadCoreBindings iface@ModIface{mi_module = modu} = do
   ncu <- mkNameCacheUpdater
-  mbinds <- liftIO (readIfaceFieldWith "plutus/core-bindings" (getWithUserData ncu) iface)
+  mbinds <- liftIO (readIfaceFieldWith "ghc/phase/core" (getWithUserData ncu) iface)
   case mbinds of
     Just (loc, ibinds) -> Just . catMaybes <$> mapM (tcIfaceBinding modu loc) ibinds
     Nothing            -> return Nothing
