@@ -20,6 +20,7 @@ import           Control.Monad                 (forM_, void)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Coroutine
 import           Data.Foldable                 (traverse_)
+import           Data.Maybe                    (maybeToList)
 import           Wallet.Effects                (startWatching)
 import           Wallet.Emulator.Chain         (ChainControlEffect, ChainEffect, getCurrentSlot, processBlock)
 import           Wallet.Emulator.MultiAgent    (MultiAgentEffect, walletAction, walletControlAction)
@@ -95,9 +96,9 @@ blockMaker :: forall effs effs2.
 blockMaker = go where
     go = do
         newBlock <- processBlock
-        _ <- mkSysCall @effs Sleeping $ Broadcast $ BlockAdded newBlock
         newSlot <- getCurrentSlot
-        _ <- mkSysCall @effs Sleeping $ Broadcast $ NewSlot newSlot
+        _ <- mkSysCall @effs Sleeping $ Broadcast $ NewSlot [newBlock] newSlot
+        _ <- sleep @effs @EmulatorMessage @effs2 Sleeping
         go
 
 -- | Thread for a simulated agent. See note [Simulated Agents]
@@ -110,12 +111,11 @@ agentThread :: forall effs effs2.
 agentThread wllt = walletAction wllt (startWatching $ walletAddress wllt) >> go where
     go = do
         e <- sleep @effs @EmulatorMessage Sleeping
-        let noti = e >>= \case
-                BlockAdded block -> Just $ BlockValidated block
-                NewSlot slot     -> Just $ SlotChanged slot
-                _                -> Nothing
+        let notis = maybeToList e >>= \case
+                NewSlot blocks slot -> fmap BlockValidated blocks ++ [SlotChanged slot]
+                _                   -> []
 
-        forM_ noti $ \n ->
+        forM_ notis $ \n ->
             walletControlAction wllt $ do
                 clientNotify n
                 chainIndexNotify n

@@ -87,8 +87,7 @@ type ContractConstraints s =
 
 -- | Messages sent to, and received by, threads in the emulator.
 data EmulatorMessage =
-    BlockAdded [Tx] -- ^ A new block was validated
-    | NewSlot Slot -- ^ A new slot has begun
+    NewSlot [[Tx]] Slot -- ^ A new slot has begun and some blocks were added.
     | EndpointCall ThreadId EndpointDescription JSON.Value -- ^ Call to an endpoint
     | Freeze -- ^ Tell the contract instance to freeze itself (see note [Freeze and Thaw])
     | ContractInstanceStateRequest ThreadId -- ^ Request for the current state of a contract instance

@@ -50,7 +50,7 @@ tests = testGroup "pingpong"
             Trace.callEndpoint @"ping" hdl ()
             void $ Trace.waitNSlots 2
     , checkPredicate "Stop the contract"
-        (assertDone twoParties (Trace.walletInstanceTag w1) isJust "W1"
+        (assertDone twoParties (Trace.walletInstanceTag w1) isNothing "W1"
         .&&. assertDone twoParties (Trace.walletInstanceTag w2) isNothing "W2"
         )
         $ do

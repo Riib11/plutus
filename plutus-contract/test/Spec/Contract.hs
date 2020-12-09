@@ -162,7 +162,7 @@ tests =
               theContract :: Contract Schema ContractError () = submitTx payment >>= awaitTxConfirmed . Ledger.txId
           in run 2 "await tx confirmed"
             (assertDone theContract tag (const True) "should be done")
-            (void $ activateContract w1 theContract tag)
+            (activateContract w1 theContract tag >> void (Trace.waitNSlots 1))
 
         , run 1 "checkpoints"
             (not (endpointAvailable @"2" checkpointContract tag) .&&. (endpointAvailable @"1" checkpointContract tag))
@@ -190,7 +190,7 @@ tests =
                             [ UserLog "Received contract state", UserLog "Final state: Right Nothing"] -> True
                             _                                                                          -> False
 
-          in run 3 "contract state"
+          in run 4 "contract state"
                 (assertUserLog matchLogs)
                 $ do
                     hdl <- Trace.activateContractWallet w1 theContract

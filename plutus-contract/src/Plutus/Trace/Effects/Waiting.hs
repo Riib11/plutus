@@ -51,4 +51,4 @@ handleWaiting ::
     ~> Eff effs
 handleWaiting = \case
     WaitUntilSlot s -> go where
-        go = sleep @effs2 Sleeping >>= \case { Just (NewSlot sl) | sl >= s -> pure sl; _ -> go }
+        go = sleep @effs2 Sleeping >>= \case { Just (NewSlot _ sl) | sl >= s -> pure sl; _ -> go }
