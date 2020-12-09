@@ -41,6 +41,7 @@ library
     exposed-modules:
         Language.PlutusTx.Plugin
     other-modules:
+        Language.PlutusTx.LoadBind
         Language.PlutusTx.PLCTypes
         Language.PlutusTx.PIRTypes
         Language.PlutusTx.Compiler.Error

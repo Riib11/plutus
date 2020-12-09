@@ -20,6 +20,7 @@ import           Language.PlutusTx.Compiler.Utils
 import           Language.PlutusTx.PIRTypes
 import           Language.PlutusTx.PLCTypes
 import           Language.PlutusTx.Plugin.Utils
+import           Language.PlutusTx.LoadBind
 
 import qualified GhcPlugins                             as GHC
 import qualified Panic                                  as GHC
@@ -64,6 +65,7 @@ data PluginCtx = PluginCtx
     { pcOpts       :: PluginOptions
     , pcFamEnvs    :: GHC.FamInstEnvs
     , pcMarkerName :: GHC.Name
+    , pcLookup :: GHC.Name -> IO (Maybe (GHC.Bind GHC.CoreBndr))
     }
 
 {- Note [Making sure unfoldings are present]
@@ -149,20 +151,25 @@ comes with its own downsides however, because the user may have imported "plc" q
 -- looks at the module's top-level bindings for plc markers and compiles their right-hand-side core expressions.
 mkPluginPass :: PluginOptions -> GHC.CoreToDo
 mkPluginPass opts = GHC.CoreDoPluginPass "Core to PLC" $ \ guts -> do
-    -- Family env code borrowed from SimplCore
-    p_fam_env <- GHC.getPackageFamInstEnv
     -- See Note [Marker resolution]
     maybeMarkerName <- GHC.thNameToGhcName 'plc
     case maybeMarkerName of
         -- TODO: test that this branch can happen using TH's 'plc exact syntax. See Note [Marker resolution]
         Nothing -> pure guts
-        Just markerName ->
+        Just markerName -> do
+            -- Family env code borrowed from SimplCore
+            p_fam_env <- GHC.getPackageFamInstEnv
+
+            env    <- GHC.getHscEnv
+            lookupFn <- liftIO $ newLoadBind env guts
+
             let pctx = PluginCtx { pcOpts = opts
                                  , pcFamEnvs = (p_fam_env, GHC.mg_fam_inst_env guts)
                                  , pcMarkerName = markerName
+                                 , pcLookup = lookupFn
                                  }
                 -- start looking for plc calls from the top-level binds
-            in GHC.bindsOnlyPass (runPluginM pctx . traverse compileBind) guts
+            GHC.bindsOnlyPass (runPluginM pctx . traverse compileBind) guts
 
 -- | The monad where the plugin runs in for each module.
 -- It is a core->core compiler monad, called PluginM, augmented with pure errors.
