@@ -12,6 +12,8 @@ module Spec.Marlowe.Marlowe
 where
 
 import           Control.Exception                     (SomeException, catch)
+import           Control.Lens                          ((&), (.~))
+import           Control.Monad                         (void)
 import qualified Data.Map.Strict                       as Map
 import           Data.Maybe                            (isJust)
 import qualified Data.Text                             as T
@@ -36,8 +38,10 @@ import qualified Codec.Serialise                       as Serialise
 import           Language.Haskell.Interpreter          (Extension (OverloadedStrings), MonadInterpreter,
                                                         OptionVal ((:=)), as, interpret, languageExtensions,
                                                         runInterpreter, set, setImports)
-import           Language.Plutus.Contract.Test
+import           Language.Plutus.Contract.Test         hiding ((.&&.))
+import qualified Language.Plutus.Contract.Test         as T
 import           Language.PlutusTx.Lattice
+import qualified Plutus.Trace.Emulator                 as Trace
 
 import qualified Language.PlutusTx.Prelude             as P
 import           Ledger                                hiding (Value)
@@ -78,13 +82,13 @@ bob = Wallet 2
 
 
 zeroCouponBondTest :: TestTree
-zeroCouponBondTest = checkPredicate @MarloweSchema @MarloweError "Zero Coupon Bond Contract" marlowePlutusContract
+zeroCouponBondTest = checkPredicateOptions (defaultCheckOptions & maxSlot .~ 250) "Zero Coupon Bond Contract"
     (assertNoFailedTransactions
-    -- /\ emulatorLog (const False) ""
-    /\ assertDone alice (const True) "contract should close"
-    /\ assertDone bob (const True) "contract should close"
-    /\ walletFundsChange alice (lovelaceValueOf (150))
-    /\ walletFundsChange bob (lovelaceValueOf (-150))
+    -- T..&&. emulatorLog (const False) ""
+    T..&&. assertDone (marlowePlutusContract @MarloweError) (Trace.walletInstanceTag alice) (const True) "contract should close"
+    T..&&. assertDone (marlowePlutusContract @MarloweError) (Trace.walletInstanceTag bob) (const True) "contract should close"
+    T..&&. walletFundsChange alice (lovelaceValueOf (150))
+    T..&&. walletFundsChange bob (lovelaceValueOf (-150))
     ) $ do
     -- Init a contract
     let alicePk = PK $ (pubKeyHash $ walletPubKey alice)
@@ -98,40 +102,33 @@ zeroCouponBondTest = checkPredicate @MarloweSchema @MarloweError "Zero Coupon Bo
                 (When
                     [ Case (Deposit alicePk bobPk ada (Constant 1000)) Close] (Slot 200) Close
                 ))] (Slot 100) Close
-    callEndpoint @"create" alice (params, zeroCouponBond)
-    handleBlockchainEvents alice
-    addBlocks 1
-    handleBlockchainEvents alice
 
-    callEndpoint @"wait" bob (params)
-    handleBlockchainEvents bob
+    bobHdl <- Trace.activateContractWallet @MarloweSchema @MarloweError bob marlowePlutusContract
+    aliceHdl <- Trace.activateContractWallet @MarloweSchema @MarloweError alice marlowePlutusContract
 
-    callEndpoint @"apply-inputs" alice (params, [IDeposit alicePk alicePk ada 850])
-    handleBlockchainEvents alice
-    addBlocks 1
-    handleBlockchainEvents alice
+    Trace.callEndpoint @"create" aliceHdl (params, zeroCouponBond)
+    Trace.waitNSlots 1
 
-    callEndpoint @"wait" alice (params)
+    Trace.callEndpoint @"wait" bobHdl (params)
 
-    handleBlockchainEvents bob
+    Trace.callEndpoint @"apply-inputs" aliceHdl (params, [IDeposit alicePk alicePk ada 850])
+    Trace.waitNSlots 1
 
-    callEndpoint @"apply-inputs" bob (params, [IDeposit alicePk bobPk ada 1000])
+    Trace.callEndpoint @"wait" aliceHdl (params)
 
-    handleBlockchainEvents alice
-    handleBlockchainEvents bob
-    addBlocks 1
-    handleBlockchainEvents alice
-    handleBlockchainEvents bob
+    Trace.callEndpoint @"apply-inputs" bobHdl (params, [IDeposit alicePk bobPk ada 1000])
+
+    void $ Trace.waitNSlots 2
 
 
 trustFundTest :: TestTree
-trustFundTest = checkPredicate @MarloweSchema @MarloweError "Trust Fund Contract" marlowePlutusContract
+trustFundTest = checkPredicateOptions (defaultCheckOptions & maxSlot .~ 200) "Trust Fund Contract"
     (assertNoFailedTransactions
-    -- /\ emulatorLog (const False) ""
-    /\ assertDone alice (const True) "contract should close"
-    /\ assertDone bob (const True) "contract should close"
-    /\ walletFundsChange alice (lovelaceValueOf (-256))
-    /\ walletFundsChange bob (lovelaceValueOf (256))
+    -- T..&&. emulatorLog (const False) ""
+    T..&&. assertDone (marlowePlutusContract @MarloweError) (Trace.walletInstanceTag alice) (const True) "contract should close"
+    T..&&. assertDone (marlowePlutusContract @MarloweError) (Trace.walletInstanceTag bob) (const True) "contract should close"
+    T..&&. walletFundsChange alice (lovelaceValueOf (-256))
+    T..&&. walletFundsChange bob (lovelaceValueOf (256))
     ) $ do
     -- Init a contract
     let alicePk = PK $ pubKeyHash $ walletPubKey alice
@@ -151,33 +148,25 @@ trustFundTest = checkPredicate @MarloweSchema @MarloweError "Trust Fund Contract
                     ] (Slot 200) Close)
             ] (Slot 100) Close
 
-    callEndpoint @"create" alice (params, contract)
-    handleBlockchainEvents alice
-    addBlocks 1
-    handleBlockchainEvents alice
+    bobHdl <- Trace.activateContractWallet @MarloweSchema @MarloweError bob marlowePlutusContract
+    aliceHdl <- Trace.activateContractWallet @MarloweSchema @MarloweError alice marlowePlutusContract
 
-    callEndpoint @"wait" bob (params)
-    handleBlockchainEvents bob
+    Trace.callEndpoint @"create" aliceHdl (params, contract)
+    Trace.waitNSlots 1
 
-    callEndpoint @"apply-inputs" alice (params,
+    Trace.callEndpoint @"wait" bobHdl (params)
+
+    Trace.callEndpoint @"apply-inputs" aliceHdl (params,
         [ IChoice chId 256
         , IDeposit alicePk alicePk ada 256
         ])
-    handleBlockchainEvents alice
-    addBlocks 150
-    handleBlockchainEvents alice
+    Trace.waitNSlots 150
 
-    callEndpoint @"wait" alice (params)
+    Trace.callEndpoint @"wait" aliceHdl (params)
 
-    handleBlockchainEvents bob
+    Trace.callEndpoint @"apply-inputs" bobHdl (params, [INotify])
 
-    callEndpoint @"apply-inputs" bob (params, [INotify])
-
-    handleBlockchainEvents alice
-    handleBlockchainEvents bob
-    addBlocks 1
-    handleBlockchainEvents alice
-    handleBlockchainEvents bob
+    void $ Trace.waitNSlots 2
 
 
 uniqueContractHash :: IO ()

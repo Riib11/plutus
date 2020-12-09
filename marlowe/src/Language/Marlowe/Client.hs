@@ -25,6 +25,8 @@ module Language.Marlowe.Client where
 import           Control.Lens
 import           Control.Monad                         (void)
 import           Control.Monad.Error.Lens              (catching, throwing)
+import           Data.Aeson                            (FromJSON, ToJSON)
+import           GHC.Generics                          (Generic)
 import           Language.Marlowe.Semantics            hiding (Contract)
 import qualified Language.Marlowe.Semantics            as Marlowe
 import           Language.Plutus.Contract
@@ -61,7 +63,8 @@ data MarloweError =
     | TransitionError (InvalidTransition MarloweData MarloweInput)
     | MarloweEvaluationError TransactionError
     | OtherContractError ContractError
-  deriving (Show)
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
 
 makeClassyPrisms ''MarloweError
 
@@ -268,7 +271,9 @@ applyInputs params inputs = do
     let theClient = mkMarloweClient params
     dat <- SM.runStep theClient (slotRange, inputs)
     case dat of
-        TransitionFailure e -> throwing _TransitionError e
+        TransitionFailure e -> do
+            logError e
+            throwing _TransitionError e
         TransitionSuccess d -> return d
 
 rolePayoutScript :: Validator
