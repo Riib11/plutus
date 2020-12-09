@@ -18,7 +18,6 @@ module Plutus.Trace.Playground(
     -- * Running traces
     , EmulatorConfig(..)
     , initialChainState
-    , onInitialThreadStopped
     , defaultEmulatorConfig
     , runPlaygroundStream
     -- * Interpreter
@@ -53,15 +52,14 @@ import           Plutus.Trace.Emulator.ContractInstance     (EmulatorRuntimeErro
 import           Plutus.Trace.Emulator.System               (launchSystemThreads)
 import           Plutus.Trace.Emulator.Types                (ContractConstraints, EmulatorMessage (..), EmulatorThreads,
                                                              walletInstanceTag)
-import           Plutus.Trace.Scheduler                     (OnInitialThreadStopped, SystemCall, ThreadId, runThreads)
+import           Plutus.Trace.Scheduler                     (SystemCall, ThreadId, runThreads)
 import           Streaming                                  (Stream)
 import           Streaming.Prelude                          (Of)
 import           Wallet.Emulator.Chain                      (ChainControlEffect, ChainEffect)
 import           Wallet.Emulator.MultiAgent                 (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
                                                              MultiAgentEffect, schedulerEvent)
 import           Wallet.Emulator.Stream                     (EmulatorConfig (..), EmulatorErr (..),
-                                                             defaultEmulatorConfig, initialChainState,
-                                                             onInitialThreadStopped, runTraceStream)
+                                                             defaultEmulatorConfig, initialChainState, runTraceStream)
 import           Wallet.Emulator.Wallet                     (Wallet (..))
 import           Wallet.Types                               (ContractInstanceId)
 
@@ -129,7 +127,7 @@ runPlaygroundStream :: forall s e effs a.
     -> Stream (Of (LogMessage EmulatorEvent)) (Eff effs) (Maybe EmulatorErr, EmulatorState)
 runPlaygroundStream conf contract =
     let wallets = fromMaybe (Wallet <$> [1..10]) (preview (initialChainState . _Left . to Map.keys) conf)
-    in runTraceStream conf . interpretPlaygroundTrace (conf ^. onInitialThreadStopped) contract wallets
+    in runTraceStream conf . interpretPlaygroundTrace contract wallets
 
 interpretPlaygroundTrace :: forall s e effs a.
     ( Member MultiAgentEffect effs
@@ -142,17 +140,16 @@ interpretPlaygroundTrace :: forall s e effs a.
     , Show e
     , JSON.ToJSON e
     )
-    => OnInitialThreadStopped
-    -> Contract s e () -- ^ The contract
+    => Contract s e () -- ^ The contract
     -> [Wallet] -- ^ Wallets that should be simulated in the emulator
     -> PlaygroundTrace a
     -> Eff effs ()
-interpretPlaygroundTrace o contract wallets action =
+interpretPlaygroundTrace contract wallets action =
     evalState @EmulatorThreads mempty
         $ evalState @(Map Wallet ContractInstanceId) Map.empty
         $ handleDeterministicIds
         $ interpret (mapLog (review schedulerEvent))
-        $ runThreads o
+        $ runThreads
         $ do
             raise $ launchSystemThreads wallets
             void

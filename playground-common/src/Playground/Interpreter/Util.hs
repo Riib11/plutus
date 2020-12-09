@@ -45,7 +45,6 @@ import           Plutus.Trace.Playground                         (PlaygroundTrac
                                                                   walletInstanceTag)
 import qualified Plutus.Trace.Playground
 import qualified Plutus.Trace.Playground                         as Trace
-import           Plutus.Trace.Scheduler                          (OnInitialThreadStopped (KeepGoing))
 import           Streaming.Prelude                               (fst')
 import           Wallet.Emulator.Folds                           (EmulatorEventFoldM)
 import qualified Wallet.Emulator.Folds                           as Folds
@@ -105,7 +104,7 @@ stage contract programJson simulatorWalletsJson = do
         playgroundDecode "[Expression schema]" . BSL.pack $ simulationJson
     simulatorWallets :: [SimulatorWallet] <-
         playgroundDecode "[SimulatorWallet]" simulatorWalletsJson
-    let config = Plutus.Trace.Playground.EmulatorConfig (Left $ toInitialDistribution simulatorWallets) KeepGoing
+    let config = Plutus.Trace.Playground.EmulatorConfig (Left $ toInitialDistribution simulatorWallets)
         allWallets = simulatorWalletWallet <$> simulatorWallets
         final = run
             $ runError

@@ -36,10 +36,10 @@ module Plutus.Trace.Scheduler(
     , EmThread(..)
     , SchedulerState(..)
     -- * Thread API
-    , OnInitialThreadStopped(..)
     , runThreads
     , fork
     , sleep
+    , exit
     -- * Etc.
     , mkThread
     , mkSysCall
@@ -49,7 +49,6 @@ module Plutus.Trace.Scheduler(
 
 
 import           Control.Lens                     hiding (Empty)
-import           Control.Monad                    (unless)
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Coroutine
 import           Control.Monad.Freer.Log          (LogMsg, logDebug)
@@ -172,6 +171,7 @@ data SysCall effs systemEvent
     | Broadcast systemEvent -- ^ Send a message to all threads
     | Message ThreadId systemEvent -- ^ Send a message to a specific thread
     | Thaw ThreadId -- ^ Unfreeze a thread.
+    | Exit -- ^ Terminate the scheduler.
 
 makePrisms ''SysCall
 
@@ -235,15 +235,15 @@ sleep :: forall effs systemEvent effs2.
     -> Eff effs2 (Maybe systemEvent)
 sleep prio = mkSysCall @effs @systemEvent @effs2 prio Suspend
 
+-- | Stop the scheduler.
+exit :: forall effs systemEvent effs2.
+    Member (Yield (SystemCall effs systemEvent) (Maybe systemEvent)) effs2
+    => Eff effs2 (Maybe systemEvent)
+exit = mkSysCall @effs @systemEvent @effs2 Normal Exit
+
 -- | Tag of the initial thread.
 initialThreadTag :: Tag
 initialThreadTag = "initial thread"
-
--- | What to do when the initial thread finishes.
-data OnInitialThreadStopped =
-    KeepGoing -- ^ Keep going until all threads have finished.
-    | Stop -- ^ Stop right away.
-    deriving stock (Eq, Ord, Show)
 
 -- | Handle the 'Yield (SystemCall effs systemEvent) (Maybe systemEvent)'
 --   effect using the scheduler, see note [Scheduler]. 'runThreads' only
@@ -253,16 +253,15 @@ runThreads ::
     ( Eq systemEvent
     , Member (LogMsg SchedulerLog) effs
     )
-    => OnInitialThreadStopped
-    -> Eff (Reader ThreadId ': Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
+    => Eff (Reader ThreadId ': Yield (SystemCall effs systemEvent) (Maybe systemEvent) ': effs) ()
     -> Eff effs ()
-runThreads o e = do
+runThreads e = do
     k <- runC $ runReader initialThreadId e
     case k of
         Done () -> pure ()
         Continue _ k' ->
             let initialThread = EmThread{_continuation = k', _threadId = initialThreadId, _tag = initialThreadTag}
-            in loop o
+            in loop
                 $ initialState
                     & activeThreads . at initialThreadTag . non mempty %~ HashSet.insert initialThreadId
                     & mailboxes . at initialThreadId .~ Just Seq.empty
@@ -274,10 +273,9 @@ loop :: forall effs systemEvent.
     ( Eq systemEvent
     , Member (LogMsg SchedulerLog) effs
     )
-    => OnInitialThreadStopped
-    -> SchedulerState effs systemEvent
+    => SchedulerState effs systemEvent
     -> Eff effs ()
-loop o s = do
+loop s = do
     case dequeue s of
         AThread EmThread{_continuation, _threadId, _tag} event schedulerState prio -> do
             let mkLog e = SchedulerLog{slEvent=e, slThread=_threadId, slPrio=prio, slTag = _tag}
@@ -285,14 +283,16 @@ loop o s = do
             result <- _continuation event
             case result of
                 Done () -> do
-                    logDebug (mkLog Stopped)
-                    unless (_threadId == initialThreadId && o == Stop) $
-                        loop o $ schedulerState & removeActiveThread _threadId
+                    logDebug (mkLog $ Stopped ThreadDone)
+                    loop $ schedulerState & removeActiveThread _threadId
                 Continue WithPriority{_priority, _thread=sysCall} k -> do
                     logDebug SchedulerLog{slEvent=Suspended, slThread=_threadId, slPrio=_priority, slTag = _tag}
                     let thisThread = suspendThread _priority EmThread{_threadId=_threadId, _continuation=k, _tag = _tag}
                     newState <- schedulerState & enqueue thisThread & handleSysCall sysCall
-                    loop o newState
+                    case newState of
+                        Left r -> do
+                            logDebug (mkLog $ Stopped r)
+                        Right newState' -> loop newState'
         _ -> pure ()
 
 -- | Deal with a system call from a running thread.
@@ -302,7 +302,7 @@ handleSysCall ::
     )
     => SysCall effs systemEvent
     -> SchedulerState effs systemEvent
-    -> Eff effs (SchedulerState effs systemEvent)
+    -> Eff effs (Either StopReason (SchedulerState effs systemEvent))
 handleSysCall sysCall schedulerState = case sysCall of
     Fork newThread -> do
         let (schedulerState', tid) = nextThreadId schedulerState
@@ -312,16 +312,18 @@ handleSysCall sysCall schedulerState = case sysCall of
                         & activeThreads . at tag . non mempty %~ HashSet.insert tid
                         & mailboxes . at tid .~ Just Seq.empty
         logDebug $ SchedulerLog{slEvent = Started, slThread = tid, slPrio = _priority t, slTag = tag}
-        pure newState
-    Suspend -> pure schedulerState
-    Broadcast msg -> pure $ schedulerState & mailboxes . traversed %~ (|> msg)
-    Message t msg -> pure $ schedulerState & mailboxes . at t . non mempty %~ (|> msg)
+        pure (Right newState)
+    Suspend -> pure $ Right schedulerState
+    Broadcast msg -> pure $ Right $ schedulerState & mailboxes . traversed %~ (|> msg)
+    Message t msg -> pure $ Right $ schedulerState & mailboxes . at t . non mempty %~ (|> msg)
     Thaw tid -> do
         let (thawed, rest) = Seq.partition (\EmThread{_threadId} -> _threadId == tid) (schedulerState ^. frozen)
         pure $
+            Right $
             schedulerState
                 & frozen .~ rest
                 & normalPrio <>~ thawed
+    Exit -> pure (Left ThreadExit)
 
 
 -- | Return a fresh thread ID and increment the counter
@@ -374,7 +376,15 @@ dequeueMessage s i = do
 --- Logging etc.
 ---
 
-data ThreadEvent = Stopped | Resumed | Suspended | Started | Thawed
+data StopReason
+        = ThreadDone -- ^ The thread was done.
+        | ThreadExit -- ^ The thread made the 'Exit' system call.
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+    deriving Pretty via (PrettyShow StopReason)
+
+
+data ThreadEvent = Stopped StopReason | Resumed | Suspended | Started | Thawed
     deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
     deriving Pretty via (PrettyShow ThreadEvent)

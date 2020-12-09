@@ -16,7 +16,6 @@ module Wallet.Emulator.Stream(
     , InitialChainState
     , initialChainState
     , initialDist
-    , onInitialThreadStopped
     , defaultEmulatorConfig
     , runTraceStream
     -- * Stream manipulation
@@ -61,7 +60,6 @@ import           Wallet.Emulator.Wallet                 (Wallet (..), walletAddr
 -- TODO: Move these two to 'Wallet.Emulator.XXX'?
 import           Language.Plutus.Contract.Trace         (InitialDistribution, defaultDist)
 import           Plutus.Trace.Emulator.ContractInstance (EmulatorRuntimeError)
-import           Plutus.Trace.Scheduler                 (OnInitialThreadStopped (Stop))
 
 {- Note [Emulator event stream]
 
@@ -135,7 +133,6 @@ runTraceStream conf =
 data EmulatorConfig =
     EmulatorConfig
         { _initialChainState      :: InitialChainState -- ^ State of the blockchain at the beginning of the simulation. Can be given as a map of funds to wallets, or as a block of transactions.
-        , _onInitialThreadStopped :: OnInitialThreadStopped -- ^ What to do when the initial thread is done
         } deriving (Eq, Show)
 
 type InitialChainState = Either InitialDistribution Block
@@ -153,7 +150,6 @@ defaultEmulatorConfig :: EmulatorConfig
 defaultEmulatorConfig =
     EmulatorConfig
         { _initialChainState = Left defaultDist
-        , _onInitialThreadStopped = Stop
         }
 
 initialState :: EmulatorConfig -> EM.EmulatorState

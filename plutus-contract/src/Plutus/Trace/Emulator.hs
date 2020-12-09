@@ -68,13 +68,13 @@ import           Control.Monad.Freer.Reader              (Reader)
 import           Control.Monad.Freer.State               (State, evalState)
 import qualified Data.Map                                as Map
 import           Data.Maybe                              (fromMaybe)
-import           Plutus.Trace.Scheduler                  (SystemCall, ThreadId, runThreads)
+import           Plutus.Trace.Scheduler                  (SystemCall, ThreadId, exit, runThreads)
 import           Wallet.Emulator.Chain                   (ChainControlEffect, ChainEffect)
 import qualified Wallet.Emulator.Chain                   as ChainState
 import           Wallet.Emulator.MultiAgent              (EmulatorEvent, EmulatorEvent' (..), EmulatorState,
                                                           MultiAgentEffect, schedulerEvent)
 import           Wallet.Emulator.Stream                  (EmulatorConfig (..), EmulatorErr (..), defaultEmulatorConfig,
-                                                          initialChainState, onInitialThreadStopped, runTraceStream)
+                                                          initialChainState, runTraceStream)
 import qualified Wallet.Emulator.Wallet                  as Wallet
 
 import           Plutus.Trace.Effects.ContractInstanceId (ContractInstanceIdEff, handleDeterministicIds)
@@ -113,14 +113,15 @@ handleEmulatorTrace ::
     , Member ContractInstanceIdEff effs
     )
     => EmulatorTrace a
-    -> Eff (Reader ThreadId ': Yield (SystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) a
-handleEmulatorTrace =
-    interpret (mapLog (UserThreadEvent . UserLog))
-    . interpret handleEmulatedWalletAPI
-    . interpret (handleEmulatorControl @_ @effs)
-    . interpret (handleWaiting @_ @effs)
-    . interpret (handleRunContract @_ @effs)
-    . raiseEnd5
+    -> Eff (Reader ThreadId ': Yield (SystemCall effs EmulatorMessage) (Maybe EmulatorMessage) ': effs) ()
+handleEmulatorTrace action = do
+    _ <- interpret (mapLog (UserThreadEvent . UserLog))
+            . interpret handleEmulatedWalletAPI
+            . interpret (handleEmulatorControl @_ @effs)
+            . interpret (handleWaiting @_ @effs)
+            . interpret (handleRunContract @_ @effs)
+            $ raiseEnd5 action
+    void $ exit @effs @EmulatorMessage
 
 -- | Run a 'Trace Emulator', streaming the log messages as they arrive
 runEmulatorStream :: forall effs a.
@@ -153,7 +154,7 @@ interpretEmulatorTrace conf action =
     evalState @EmulatorThreads mempty
         $ handleDeterministicIds
         $ interpret (mapLog (review schedulerEvent))
-        $ runThreads (conf ^. onInitialThreadStopped)
+        $ runThreads
         $ do
             raise $ launchSystemThreads wallets
-            void $ handleEmulatorTrace action'
+            handleEmulatorTrace action'
