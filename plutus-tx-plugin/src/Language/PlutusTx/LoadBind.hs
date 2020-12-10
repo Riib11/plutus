@@ -19,7 +19,6 @@ import Name
 import Module
 import HscTypes
 import CoreSyn
-import GhcPlugins
 
 {-
 Initialise a stateful `IO` function for loading core bindings by loading the
@@ -57,7 +56,8 @@ loadBind modBindsR env name = do
         Just (Just binds) -> return $ lookupNameEnv binds name -- We've imported this module - lookup the binding.
         Nothing -> do -- Try and import the module.
              bnds <- initIfaceLoad env $
-                     -- FIXME: original NotBoot changed to False
+                     -- false says that is is not an .hs-boot file
+                     -- instead of False put NotBoot for >=GHC9
                      initIfaceLcl (mi_semantic_module iface) (text "core") False $
                        loadCoreBindings iface
              case bnds of
@@ -82,8 +82,7 @@ recursive bindings):
 nameOf :: Bind Id -> Name
 nameOf (NonRec n _)     = idName n
 nameOf (Rec ((n, _):_)) = idName n
--- FIXME: pattern match non-exhaustive
-nameOf _ = error "nameOf pattern match match non-exhaustive"
+nameOf (Rec []) = error "This can never happen at runtime."
 
 {-
 Perform interface `typecheck` loading from this binding's extensible interface
@@ -91,11 +90,11 @@ field within the deserialised `ModIface` to load the bindings that the field
 contains, if the field exists.
 -}
 loadCoreBindings :: ModIface -> IfL (Maybe [Bind CoreBndr])
-loadCoreBindings iface@ModIface{mi_module = modu} = do
+loadCoreBindings iface = do
   ncu <- mkNameCacheUpdater
   mbinds <- liftIO (readIfaceFieldWith "ghc/phase/core" (getWithUserData ncu) iface)
   case mbinds of
-    Just (loc, ibinds) -> Just . catMaybes <$> mapM (tcIfaceBinding modu loc) ibinds
+    Just ibinds -> Just . catMaybes <$> mapM tcIfaceBinding ibinds
     Nothing            -> return Nothing
 
 
@@ -112,12 +111,12 @@ bindings from causing problems in loading.
 In theory, we should be removing them during serialisation, but they are structured
 as real bindings, so we would have to do a fragile test on the `Name`.
 -}
-tcIfaceBinding :: Module -> SrcSpan -> IfaceBinding -> IfL (Maybe (Bind Id))
-tcIfaceBinding modu loc ibind =
-  rightToMaybe <$> tryAllM (tcIfaceBinding' modu loc ibind)
+tcIfaceBinding :: IfaceBinding -> IfL (Maybe (Bind Id))
+tcIfaceBinding ibind =
+  rightToMaybe <$> tryAllM (tcIfaceBinding' ibind)
 
-tcIfaceBinding' :: Module -> SrcSpan -> IfaceBinding -> IfL (Bind Id)
-tcIfaceBinding' _mod _loc b =
+tcIfaceBinding' :: IfaceBinding -> IfL (Bind Id)
+tcIfaceBinding' b =
   case b of
     IfaceNonRec letbndr rhs -> uncurry NonRec <$> go letbndr rhs
     IfaceRec    pairs       -> Rec <$> mapM (uncurry go) pairs
