@@ -28,8 +28,8 @@ import           Control.Lens
 
 import qualified Data.Text                  as T
 import           Data.Text.Prettyprint.Doc  as PP
-import ErrorCode
-import Text.Printf
+import           ErrorCode
+import           Text.Printf
 
 data TypeErrorExt uni ann =
       MalformedDataConstrResType
@@ -54,9 +54,9 @@ makeClassyPrisms ''Error
 instance ErrorCode (Error _a _b _c) where
    errorCode UnsupportedError {} = 3
    errorCode CompilationError {} = 2
-   errorCode (PIRTypeError e) = errorCode e
-   errorCode (PLCTypeError e) = errorCode e
-   errorCode (PLCError e) = errorCode e
+   errorCode (PIRTypeError e)    = errorCode e
+   errorCode (PLCTypeError e)    = errorCode e
+   errorCode (PLCError e)        = errorCode e
 
 
 instance PLC.AsTypeError (Error uni fun a) (PIR.Term PIR.TyName PIR.Name uni fun ()) uni fun a where

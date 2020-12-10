@@ -2,19 +2,19 @@
 {-# OPTIONS_HADDOCK hide #-}
 module TH.GenDocs (genDocs) where
 
-import Language.Haskell.TH as TH
-import Numeric.Natural
-import Text.Printf
-import TH.GenCodes
-import Data.List
-import Errors
+import           Data.List
+import           Errors
+import           Language.Haskell.TH as TH
+import           Numeric.Natural
+import           TH.GenCodes
+import           Text.Printf
 
 -- | Generate haddock documentation for all errors and their codes,
 -- by creating type-synonyms to lifted dataconstructors using a DataKinds trick.
 genDocs :: Q [TH.Dec]
 genDocs = let allCodes = $(genCodes allErrors)
           in case findDuplicates allCodes of
-                 [] -> pure $ fmap mkTySyn (zip allErrors allCodes)
+                 []   -> pure $ fmap mkTySyn (zip allErrors allCodes)
                  -- Fail at compile time if duplicate error codes are found.
                  dups -> fail $ "ErrorCode instances have some duplicate error-code numbers: " ++ show dups
 

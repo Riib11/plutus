@@ -2,7 +2,7 @@ module ErrorCode
     ( ErrorCode(..)
     ) where
 
-import Numeric.Natural
+import           Numeric.Natural
 
 {- NOTE [Error Codes of plutus errors]
 

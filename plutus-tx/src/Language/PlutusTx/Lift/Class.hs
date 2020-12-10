@@ -1,7 +1,7 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE DeriveDataTypeable    #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
@@ -33,9 +33,9 @@ import qualified Language.PlutusCore.MkPlc              as PLC
 import           Language.PlutusCore.Quote
 import qualified Language.PlutusCore.Universe           as PLC
 
+import           Control.Monad.Except                   hiding (lift)
 import           Control.Monad.Reader                   hiding (lift)
 import           Control.Monad.State                    hiding (lift)
-import Control.Monad.Except hiding (lift)
 import qualified Control.Monad.Trans                    as Trans
 
 import qualified Language.Haskell.TH                    as TH
@@ -45,16 +45,16 @@ import qualified Language.Haskell.TH.Syntax             as TH
 import qualified Data.Map                               as Map
 import qualified Data.Set                               as Set
 
+import qualified Control.Exception                      as Prelude (Exception, throw)
 import           Data.Foldable
 import           Data.List                              (sortBy)
 import           Data.Maybe
 import           Data.Proxy
 import qualified Data.Text                              as T
-import           Data.Traversable
 import qualified Data.Text.Prettyprint.Doc              as PP
-import ErrorCode
-import qualified Control.Exception as Prelude (throw, Exception)
-import qualified Data.Typeable as Prelude
+import           Data.Traversable
+import qualified Data.Typeable                          as Prelude
+import           ErrorCode
 
 {- Note [Compiling at TH time and runtime]
 We want to reuse PIR's machinery for defining datatypes. However, one cannot
@@ -99,9 +99,9 @@ instance Prelude.Exception LiftError
 instance PP.Pretty LiftError where
     pretty (UnsupportedLiftType t) = "Unsupported lift type: " PP.<+> PP.viaShow t
     pretty (UnsupportedLiftKind t) = "Unsupported lift kind: " PP.<+> PP.viaShow t
-    pretty (UserLiftError t) = PP.pretty t
+    pretty (UserLiftError t)       = PP.pretty t
     pretty (LiftMissingDataCons n) = "Constructors not created for type: " PP.<+> PP.viaShow n
-    pretty (LiftMissingVar n) = "Unknown local variable: " PP.<+> PP.viaShow n
+    pretty (LiftMissingVar n)      = "Unknown local variable: " PP.<+> PP.viaShow n
 
 instance Show LiftError where
     show = show . PP.pretty -- for Control.Exception
@@ -109,9 +109,9 @@ instance Show LiftError where
 instance ErrorCode LiftError where
     errorCode UnsupportedLiftType {} = 44
     errorCode UnsupportedLiftKind {} = 45
-    errorCode UserLiftError {} = 46
+    errorCode UserLiftError {}       = 46
     errorCode LiftMissingDataCons {} = 47
-    errorCode LiftMissingVar {} = 48
+    errorCode LiftMissingVar {}      = 48
 
 {- Note [Type variables]
 We handle types in almost exactly the same way when we are constructing Typeable
@@ -240,7 +240,7 @@ compileKind :: TH.Kind -> THCompile (Kind ())
 compileKind = \case
     TH.StarT                          -> pure $ Type ()
     TH.AppT (TH.AppT TH.ArrowT k1) k2 -> KindArrow () <$> compileKind k1 <*> compileKind k2
-    k -> throwError $ UnsupportedLiftKind k
+    k                                 -> throwError $ UnsupportedLiftKind k
 
 compileType :: TH.Type -> THCompile (TH.TExpQ (RTCompileScope PLC.DefaultUni fun (Type TyName PLC.DefaultUni ())))
 compileType = \case
@@ -528,5 +528,5 @@ runTHCompile m = do
           flip runReaderT mempty $
           flip runStateT mempty m
     case res of
-        Left a -> fail $ "Generating Lift instances: " ++ show (PP.pretty a)
+        Left a  -> fail $ "Generating Lift instances: " ++ show (PP.pretty a)
         Right b -> pure b

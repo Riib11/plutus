@@ -44,7 +44,7 @@ import           Control.Monad.Except
 import           Data.String                                     (IsString)
 import           Data.Text                                       (Text)
 import           Data.Text.Prettyprint.Doc
-import ErrorCode
+import           ErrorCode
 
 -- | When unlifting of a PLC term into a Haskell value fails, this error is thrown.
 newtype UnliftingError
@@ -246,24 +246,24 @@ instance ErrorCode UnliftingError where
       errorCode        UnliftingErrorE {}        = 30
 
 instance ErrorCode (ConstAppError _a _b) where
-      errorCode        TooManyArgumentsConstAppError {}        = 29
-      errorCode        TooFewArgumentsConstAppError {}        = 28
-      errorCode (UnliftingConstAppError e) = errorCode e
+      errorCode        TooManyArgumentsConstAppError {} = 29
+      errorCode        TooFewArgumentsConstAppError {}  = 28
+      errorCode (UnliftingConstAppError e)              = errorCode e
 
 instance ErrorCode (MachineError err _a) where
-      errorCode        EmptyBuiltinArityMachineError {}        = 34
-      errorCode        UnexpectedBuiltinTermArgumentMachineError {}        = 33
-      errorCode        BuiltinTermArgumentExpectedMachineError {}        = 32
-      errorCode        OpenTermEvaluatedMachineError {}        = 27
-      errorCode        NonFunctionalApplicationMachineError {}        = 26
-      errorCode        NonWrapUnwrappedMachineError {}        = 25
-      errorCode        NonPolymorphicInstantiationMachineError {}        = 24
-      errorCode        (ConstAppMachineError e)        = errorCode e
-      errorCode        UnknownBuiltin {}        = 17
+      errorCode        EmptyBuiltinArityMachineError {}             = 34
+      errorCode        UnexpectedBuiltinTermArgumentMachineError {} = 33
+      errorCode        BuiltinTermArgumentExpectedMachineError {}   = 32
+      errorCode        OpenTermEvaluatedMachineError {}             = 27
+      errorCode        NonFunctionalApplicationMachineError {}      = 26
+      errorCode        NonWrapUnwrappedMachineError {}              = 25
+      errorCode        NonPolymorphicInstantiationMachineError {}   = 24
+      errorCode        (ConstAppMachineError e)                     = errorCode e
+      errorCode        UnknownBuiltin {}                            = 17
 
 instance (ErrorCode user) => ErrorCode (EvaluationError user _a _b) where
   errorCode (InternalEvaluationError e) = errorCode e
-  errorCode (UserEvaluationError e) = errorCode e
+  errorCode (UserEvaluationError e)     = errorCode e
 
 
 instance ErrorCode err => ErrorCode (ErrorWithCause err t) where

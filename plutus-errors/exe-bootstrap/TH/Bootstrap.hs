@@ -4,11 +4,11 @@ module TH.Bootstrap (
     bootstrap
     ) where
 
-import Language.Haskell.TH
-import Language.Haskell.TH.Datatype
-import Data.Foldable
-import Numeric.Natural
-import Data.Map as M
+import           Data.Foldable
+import           Data.Map                     as M
+import           Language.Haskell.TH
+import           Language.Haskell.TH.Datatype
+import           Numeric.Natural
 
 {- |
 The purpose of this function is to help in the (re)-generation of 'ErrorCode' instances

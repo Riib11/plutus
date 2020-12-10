@@ -2,8 +2,8 @@
 module Main where
 
 
-import Errors
-import TH.Bootstrap
+import           Errors
+import           TH.Bootstrap
 
 main :: IO ()
 main = do

@@ -47,9 +47,9 @@ import qualified Data.ByteString.Unsafe                 as BSUnsafe
 import qualified Data.Map                               as Map
 import qualified Data.Text.Prettyprint.Doc              as PP
 import           Data.Traversable
+import           ErrorCode
 import qualified FamInstEnv                             as GHC
-import ErrorCode
-import Text.Printf
+import           Text.Printf
 
 import           System.IO.Unsafe                       (unsafePerformIO)
 

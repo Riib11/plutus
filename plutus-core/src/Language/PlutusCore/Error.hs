@@ -38,8 +38,8 @@ import           Control.Monad.Except
 import qualified Data.Text                          as T
 import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Internal (Doc (Text))
-import ErrorCode
-import Text.Printf
+import           ErrorCode
+import           Text.Printf
 
 {- Note [Annotations and equality]
 Equality of two errors DOES DEPEND on their annotations.
@@ -188,12 +188,12 @@ instance (GShow uni, Closed uni, uni `Everywhere` PrettyConst, Pretty fun, Prett
 instance ErrorCode (ParseError _a) where
     errorCode InvalidBuiltinConstant {} = 10
     errorCode UnknownBuiltinFunction {} = 9
-    errorCode UnknownBuiltinType {} = 8
-    errorCode Unexpected {} = 7
-    errorCode LexErr {} = 6
+    errorCode UnknownBuiltinType {}     = 8
+    errorCode Unexpected {}             = 7
+    errorCode LexErr {}                 = 6
 
 instance ErrorCode (UniqueError _a) where
-      errorCode FreeVariable {} = 21
+      errorCode FreeVariable {}    = 21
       errorCode IncoherentUsage {} = 12
       errorCode MultiplyDefined {} = 11
 
@@ -202,15 +202,15 @@ instance ErrorCode (NormCheckError _a _b _c _d _e) where
       errorCode BadType {} = 13
 
 instance ErrorCode (TypeError _a _b _c _d) where
-    errorCode FreeVariableE {} = 20
-    errorCode FreeTypeVariableE {} = 19
-    errorCode TypeMismatch {} = 16
-    errorCode KindMismatch {} = 15
+    errorCode FreeVariableE {}           = 20
+    errorCode FreeTypeVariableE {}       = 19
+    errorCode TypeMismatch {}            = 16
+    errorCode KindMismatch {}            = 15
     errorCode UnknownBuiltinFunctionE {} = 18
 
 instance ErrorCode (Error _a _b _c) where
-    errorCode (ParseErrorE e) = errorCode e
+    errorCode (ParseErrorE e)           = errorCode e
     errorCode (UniqueCoherencyErrorE e) = errorCode e
-    errorCode (TypeErrorE e) = errorCode e
-    errorCode (NormCheckErrorE e) = errorCode e
+    errorCode (TypeErrorE e)            = errorCode e
+    errorCode (NormCheckErrorE e)       = errorCode e
 

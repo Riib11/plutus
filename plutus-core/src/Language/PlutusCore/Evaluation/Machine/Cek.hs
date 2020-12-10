@@ -68,7 +68,7 @@ import           Control.Monad.State.Strict
 import           Data.Array
 import           Data.HashMap.Monoidal
 import           Data.Text.Prettyprint.Doc
-import ErrorCode
+import           ErrorCode
 
 {- Note [Scoping]
    The CEK machine does not rely on the global uniqueness condition, so the renamer pass is not a
@@ -123,8 +123,8 @@ data CekUserError
     deriving (Show, Eq)
 
 instance ErrorCode CekUserError where
-      errorCode        CekEvaluationFailure {}        = 37
-      errorCode        CekOutOfExError {}        = 36
+      errorCode        CekEvaluationFailure {} = 37
+      errorCode        CekOutOfExError {}      = 36
 
 {- Note [Being generic over @term@ in 'CekM']
 We have a @term@-generic version of 'CekM' called 'CekCarryingM', which itself requires a

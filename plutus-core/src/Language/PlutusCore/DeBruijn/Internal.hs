@@ -45,8 +45,8 @@ import           Data.Typeable
 import           Numeric.Natural
 
 import           Control.DeepSeq            (NFData)
+import           ErrorCode
 import           GHC.Generics
-import ErrorCode
 
 -- | A relative index used for de Bruijn identifiers.
 newtype Index = Index Natural
@@ -167,7 +167,7 @@ instance Exception FreeVariableError
 
 instance ErrorCode FreeVariableError where
     errorCode  FreeIndex {}  = 23
-    errorCode  FreeUnique {}  = 22
+    errorCode  FreeUnique {} = 22
 
 -- | Get the 'Index' corresponding to a given 'Unique'.
 getIndex :: (MonadReader Levels m, MonadError FreeVariableError m) => Unique -> m Index

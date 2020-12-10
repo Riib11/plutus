@@ -30,7 +30,7 @@ import           Control.Monad.Except
 import qualified Data.Text                         as T
 import qualified Data.Text.Prettyprint.Doc         as PP
 import           Data.Typeable
-import ErrorCode
+import           ErrorCode
 
 -- | An error with some (nested) context. The integer argument to 'WithContextC' represents
 -- the priority of the context when displaying it. Lower numbers are more prioritised.
@@ -41,7 +41,7 @@ makeClassyPrisms ''WithContext
 type CompileError uni fun = WithContext T.Text (Error uni fun ())
 
 instance ErrorCode (CompileError _a _b) where
-    errorCode (NoContext e) = errorCode e
+    errorCode (NoContext e)        = errorCode e
     errorCode (WithContextC _ _ w) = errorCode w
 
 withContext :: (MonadError (WithContext c e) m) => Int -> c -> m a -> m a
@@ -80,13 +80,13 @@ data Error uni fun a = PLCError (PLC.Error uni fun a)
 makeClassyPrisms ''Error
 
 instance ErrorCode (Error _a _b _c) where
-      errorCode CompilationError {} = 41
-      errorCode UnsupportedError {} = 42
-      errorCode FreeVariableError {} = 43
-      errorCode InvalidMarkerError {} = 49
+      errorCode CompilationError {}    = 41
+      errorCode UnsupportedError {}    = 42
+      errorCode FreeVariableError {}   = 43
+      errorCode InvalidMarkerError {}  = 49
       errorCode CoreNameLookupError {} = 50
-      errorCode (PLCError e) = errorCode e
-      errorCode (PIRError e) = errorCode e
+      errorCode (PLCError e)           = errorCode e
+      errorCode (PIRError e)           = errorCode e
 
 instance (PLC.GShow uni, PLC.Closed uni, uni `PLC.Everywhere` PLC.PrettyConst, PP.Pretty fun, PP.Pretty a) =>
             PP.Pretty (Error uni fun a) where
