@@ -74,6 +74,8 @@ allErrors =
    , 'PTX.CompilationError
    , 'PTX.UnsupportedError
    , 'PTX.FreeVariableError
+   , 'PTX.InvalidMarkerError
+   , 'PTX.CoreNameLookupError
    , 'PTX.UnsupportedLiftType
    , 'PTX.UnsupportedLiftKind
    , 'PTX.UserLiftError

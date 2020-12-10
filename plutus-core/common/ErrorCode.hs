@@ -49,7 +49,7 @@ mega-package plutus-errors to "guess-pick" an error-code that is not currently i
 by the whole codebase, by running
 
 ```
-> cabal run plutus-errors:next-error.
+> cabal run plutus-errors-next
 An error code that is not currently used is: 9998
 ```
 

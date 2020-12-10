@@ -29,6 +29,7 @@ import           Control.Lens
 import qualified Data.Text                  as T
 import           Data.Text.Prettyprint.Doc  as PP
 import ErrorCode
+import Text.Printf
 
 data TypeErrorExt uni ann =
       MalformedDataConstrResType
@@ -92,7 +93,7 @@ instance
 
 instance (PLC.GShow uni, PLC.Closed uni, uni `PLC.Everywhere` PLC.PrettyConst, Pretty fun, Pretty ann) =>
             PrettyBy PLC.PrettyConfigPlc (Error uni fun ann) where
-     prettyBy config er = PP.pretty (errorCode er) <> ":" <+> case er of
+     prettyBy config er = PP.pretty (printf "E%03d" $ errorCode er :: String) <> ":" <+> case er of
         CompilationError x e -> "Error during compilation:" <+> PP.pretty e <> "(" <> PP.pretty x <> ")"
         UnsupportedError x e -> "Unsupported construct:" <+> PP.pretty e <+> "(" <> PP.pretty x <> ")"
         PLCError e           -> PP.vsep [ "Error from the PLC compiler:", PLC.prettyBy config e ]

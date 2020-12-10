@@ -39,6 +39,8 @@ import qualified Data.Text                          as T
 import           Data.Text.Prettyprint.Doc
 import           Data.Text.Prettyprint.Doc.Internal (Doc (Text))
 import ErrorCode
+import Text.Printf
+
 {- Note [Annotations and equality]
 Equality of two errors DOES DEPEND on their annotations.
 So feel free to use @deriving Eq@ for errors.
@@ -152,7 +154,7 @@ instance ( Pretty ann
 instance (GShow uni, Closed uni, uni `Everywhere` PrettyConst,  Pretty ann, Pretty fun, Pretty term) =>
             PrettyBy PrettyConfigPlc (TypeError term uni fun ann) where
     prettyBy config e@(KindMismatch ann ty k k')          =
-        pretty (errorCode e) <> ":" <+>
+        pretty (printf "E%03d" $ errorCode e :: String) <> ":" <+>
         "Kind mismatch at" <+> pretty ann <+>
         "in type" <+> squotes (prettyBy config ty) <>
         ". Expected kind" <+> squotes (prettyBy config k) <+>

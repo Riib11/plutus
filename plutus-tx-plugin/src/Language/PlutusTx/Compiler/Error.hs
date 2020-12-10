@@ -40,6 +40,10 @@ makeClassyPrisms ''WithContext
 
 type CompileError uni fun = WithContext T.Text (Error uni fun ())
 
+instance ErrorCode (CompileError _a _b) where
+    errorCode (NoContext e) = errorCode e
+    errorCode (WithContextC _ _ w) = errorCode w
+
 withContext :: (MonadError (WithContext c e) m) => Int -> c -> m a -> m a
 withContext p c act = catchError act $ \err -> throwError (WithContextC p c err)
 
