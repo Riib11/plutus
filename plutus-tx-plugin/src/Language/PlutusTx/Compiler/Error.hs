@@ -76,9 +76,11 @@ data Error uni fun a = PLCError (PLC.Error uni fun a)
 makeClassyPrisms ''Error
 
 instance ErrorCode (Error _a _b _c) where
-      errorCode FreeVariableError {} = 43
-      errorCode UnsupportedError {} = 42
       errorCode CompilationError {} = 41
+      errorCode UnsupportedError {} = 42
+      errorCode FreeVariableError {} = 43
+      errorCode InvalidMarkerError {} = 49
+      errorCode CoreNameLookupError {} = 50
       errorCode (PLCError e) = errorCode e
       errorCode (PIRError e) = errorCode e
 
