@@ -7,8 +7,6 @@
 module Docs () where
 
 import TH.GenDocs
-import Errors
-import Codes
 
-$(genDocs (zip allErrors allCodes))
+genDocs
 

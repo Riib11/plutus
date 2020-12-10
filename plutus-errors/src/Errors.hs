@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_HADDOCK hide #-}
 -- | The cataloguing of all Plutus errors, obsolete or not.
 module Errors (allErrors) where
 

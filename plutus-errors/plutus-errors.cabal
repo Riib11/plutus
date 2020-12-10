@@ -40,10 +40,9 @@ library
   import: lang
   exposed-modules:
       Errors,
-      Codes,
-      Docs
+      Docs,
+      TH.GenCodes
   other-modules:
-      TH.GenCodes,
       TH.GenDocs
   hs-source-dirs: src
   build-depends:
@@ -77,16 +76,3 @@ executable plutus-errors-bootstrap
       containers >= 0.6,
       plutus-core,
       plutus-errors
-
-test-suite plutus-errors-test
-  import: lang
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-  hs-source-dirs: test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5,
-      plutus-errors,
-      tasty -any,
-      tasty-hunit -any

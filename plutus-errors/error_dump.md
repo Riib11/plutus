@@ -1,3 +1,9 @@
+# Error dump
+
+This file contains a dump of most errors found
+when searching the whole plutus codebase
+
+```
 Language.PlutusIR.Error,MalformedDataConstrResType,ann,PLC.Type
 Language.PlutusIR.Error,PLC.TypeError
 Language.PlutusIR.Error,CompilationError,ann,Text
@@ -265,4 +271,6 @@ src/Plutus/SCB/Webserver/Types.hs ErrorResponse Text
 
 Servant ServerError
 Servant ClientError
+```
+
 

@@ -1,8 +1,10 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Main where
 
-import Codes
+import Errors
+import TH.GenCodes
 
 -- | Executable to help developers by returning a currently-unused error code
 main :: IO ()
 main =  putStrLn $ "An error code that is not currently in-use is: "
-                 ++ show (maximum allCodes + 1)
+                 ++ show (maximum $(genCodes allErrors) + 1)

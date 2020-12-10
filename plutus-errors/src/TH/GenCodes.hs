@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_HADDOCK hide #-}
 module TH.GenCodes (genCodes) where
 
 import Language.Haskell.TH as TH
@@ -6,9 +7,8 @@ import Language.Haskell.TH.Datatype as TH
 import Data.Traversable
 import ErrorCode
 
--- | Takes the names of all errors/dataconstructors in a list
--- and constructs a list hs-experession containing
--- allthe error codes :: [Natural]
+-- | Takes a list of errors names (dataconstructors)
+-- and maps it to a list that will evaluate to their actuall error codes :: [Natural]
 genCodes :: [TH.Name] -> Q TH.Exp
 genCodes cs = do
    method <- [| errorCode |]    -- the errorCode method
@@ -21,7 +21,7 @@ genCodes cs = do
 -- generate a fully-applied (saturated) value of the constructor by
 -- fully applying it to `undefined` values.
 -- e.g. `(Nothing), (Just undefined), (undefined,undefined,undefined), etc`
--- Note: breaks on data-constructors that have bangs.
+-- Note: breaks on data-constructors containing bangs.
 genSaturatedCon :: TH.ConstructorInfo -> TH.Exp -> TH.Exp
 genSaturatedCon cInfo undef =
     foldr (const $ \ acc -> acc `AppE` undef)
